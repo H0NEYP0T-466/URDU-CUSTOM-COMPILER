@@ -1,0 +1,160 @@
+/* ═══════════════════════════════════════════════
+   TACPanel — Three Address Code comparison view
+   ═══════════════════════════════════════════════ */
+
+.tac-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* ── Side-by-side columns ── */
+.tac-panel__columns {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.tac-panel__column {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.tac-panel__column:first-child {
+  border-right: 1px solid var(--color-border-subtle);
+}
+
+/* ── Column headers ── */
+.tac-panel__column-header {
+  padding: 10px 14px;
+  background: var(--color-bg-panel);
+  border-bottom: 1px solid var(--color-border-subtle);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: var(--color-text-muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.tac-panel__column-header--original {
+  color: var(--color-text-muted);
+}
+
+.tac-panel__column-header--optimized {
+  color: var(--color-success);
+}
+
+/* ── Code lines ── */
+.tac-panel__code {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 0;
+  font-family: var(--font-code);
+  font-size: 0.82rem;
+  line-height: 1.6;
+}
+
+.tac-panel__line {
+  display: flex;
+  align-items: baseline;
+  padding: 2px 14px;
+  transition: background var(--transition-fast);
+}
+
+.tac-panel__line:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.tac-panel__line-num {
+  width: 28px;
+  text-align: right;
+  margin-right: 12px;
+  color: var(--color-text-muted);
+  font-size: 0.72rem;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.tac-panel__line-content {
+  color: var(--color-text-primary);
+  white-space: pre;
+}
+
+/* Label lines (L0:, L1:) */
+.tac-panel__line--label .tac-panel__line-content {
+  color: #dcdcaa;
+  font-weight: 600;
+}
+
+/* Control flow (goto, iffalse) */
+.tac-panel__line--control .tac-panel__line-content {
+  color: #c586c0;
+}
+
+/* Print lines */
+.tac-panel__line--print .tac-panel__line-content {
+  color: #ce9178;
+}
+
+/* Highlighted changed/optimized lines */
+.tac-panel__line--changed {
+  background: rgba(15, 155, 142, 0.08);
+}
+
+.tac-panel__line--removed {
+  background: rgba(244, 71, 71, 0.06);
+  text-decoration: line-through;
+  opacity: 0.5;
+}
+
+/* ── Changes log ── */
+.tac-panel__changes {
+  border-top: 1px solid var(--color-border);
+  padding: 12px 14px;
+  max-height: 140px;
+  overflow-y: auto;
+  flex-shrink: 0;
+  background: var(--color-bg-secondary);
+}
+
+.tac-panel__changes-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: var(--color-text-muted);
+  margin-bottom: 8px;
+}
+
+.tac-panel__change-item {
+  font-family: var(--font-code);
+  font-size: 0.78rem;
+  color: #dcdcaa;
+  padding: 3px 0;
+  line-height: 1.5;
+}
+
+.tac-panel__change-item::before {
+  content: "→ ";
+  color: var(--color-accent);
+}
+
+/* ── Empty state ── */
+.tac-panel__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 8px;
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+  font-family: var(--font-code);
+}

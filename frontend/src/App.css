@@ -1,0 +1,89 @@
+/* ═══════════════════════════════════════════════
+   App — Main layout shell
+   ═══════════════════════════════════════════════ */
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--color-bg-primary);
+}
+
+/* ── Main workspace area (below toolbar) ── */
+.app__workspace {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+/* ── Editor + Output split ── */
+.app__main {
+  flex: 1;
+  display: flex;
+  min-width: 0;
+  position: relative;
+}
+
+/* ── Editor panel ── */
+.app__editor-wrapper {
+  display: flex;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* ── Output panel ── */
+.app__output-wrapper {
+  display: flex;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* ── Draggable resize handle ── */
+.app__resize-handle {
+  width: 6px;
+  background: var(--color-border);
+  cursor: col-resize;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 10;
+  transition: background var(--transition-fast);
+}
+
+/* Wider invisible hit area for easier grabbing */
+.app__resize-handle::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -4px;
+  right: -4px;
+  z-index: 1;
+}
+
+.app__resize-handle:hover {
+  background: var(--color-accent);
+}
+
+/* Active state while dragging */
+.app__resize-handle:active {
+  background: var(--color-accent-glow);
+}
+
+/* Center dot indicator */
+.app__resize-handle::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 4px;
+  height: 32px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.15);
+  transition: background var(--transition-fast);
+}
+
+.app__resize-handle:hover::after {
+  background: rgba(255, 255, 255, 0.35);
+}

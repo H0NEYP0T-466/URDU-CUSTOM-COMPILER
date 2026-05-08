@@ -1,0 +1,90 @@
+/* ═══════════════════════════════════════════════
+   PythonPanel — Generated Python code viewer
+   ═══════════════════════════════════════════════ */
+
+.python-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* ── Header with copy button ── */
+.python-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: var(--color-bg-panel);
+  border-bottom: 1px solid var(--color-border-subtle);
+  flex-shrink: 0;
+}
+
+.python-panel__header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: var(--color-text-muted);
+}
+
+.python-panel__copy-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: var(--color-bg-card);
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
+  transition: all var(--transition-fast);
+  cursor: pointer;
+}
+
+.python-panel__copy-btn:hover {
+  background: var(--color-accent);
+  color: #fff;
+  border-color: var(--color-accent);
+}
+
+.python-panel__copy-btn--copied {
+  background: var(--color-success);
+  color: #fff;
+  border-color: var(--color-success);
+}
+
+/* ── Monaco editor container ── */
+.python-panel__editor {
+  flex: 1;
+  overflow: hidden;
+}
+
+/* ── Footer note ── */
+.python-panel__footer {
+  padding: 8px 14px;
+  border-top: 1px solid var(--color-border-subtle);
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+  font-family: var(--font-code);
+  text-align: center;
+  background: var(--color-bg-secondary);
+  flex-shrink: 0;
+}
+
+/* ── Empty state ── */
+.python-panel__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 8px;
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+  font-family: var(--font-code);
+}

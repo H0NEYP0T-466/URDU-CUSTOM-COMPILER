@@ -1,0 +1,50 @@
+/* ═══════════════════════════════════════════════
+   Editor — Monaco Editor wrapper
+   ═══════════════════════════════════════════════ */
+
+.editor {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  position: relative;
+}
+
+/* ── Header bar ── */
+.editor__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  background: var(--color-bg-panel);
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.editor__tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  font-family: var(--font-code);
+  color: var(--color-text-muted);
+}
+
+.editor__tab-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  box-shadow: 0 0 6px rgba(15, 155, 142, 0.4);
+}
+
+.editor__line-count {
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+  font-family: var(--font-code);
+}
+
+/* ── Monaco container ── */
+.editor__monaco {
+  flex: 1;
+  overflow: hidden;
+}
