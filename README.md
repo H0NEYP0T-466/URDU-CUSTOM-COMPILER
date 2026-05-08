@@ -1,50 +1,164 @@
 # URDU-CUSTOM-COMPILER 🇵🇰
 
-**ایک کسٹم زبان** — A custom programming language interpreter with Roman Urdu syntax.
+<p align="center">
 
-## Tech Stack
+  <!-- Core -->
+  ![GitHub License](https://img.shields.io/github/license/H0NEYP0T-466/URDU-CUSTOM-COMPILER?style=for-the-badge&color=brightgreen)
+  ![GitHub Stars](https://img.shields.io/github/stars/H0NEYP0T-466/URDU-CUSTOM-COMPILER?style=for-the-badge&color=yellow)
+  ![GitHub Forks](https://img.shields.io/github/forks/H0NEYP0T-466/URDU-CUSTOM-COMPILER?style=for-the-badge&color=blue)
+  ![GitHub Issues](https://img.shields.io/github/issues/H0NEYP0T-466/URDU-CUSTOM-COMPILER?style=for-the-badge&color=red)
+  ![GitHub Pull Requests](https://img.shields.io/github/issues-pr/H0NEYP0T-466/URDU-CUSTOM-COMPILER?style=for-the-badge&color=orange)
+  ![Contributions Welcome](https://img.shields.io/badge/Contributions-Welcome-brightgreen?style=for-the-badge)
 
-| Layer     | Technology                          |
-|-----------|-------------------------------------|
-| Frontend  | React 19 + TypeScript + Monaco Editor |
-| Backend   | FastAPI (Python 3.10+)              |
-| Compiler  | Hand-written Lexer → Parser → Interpreter |
-| Styling   | Vanilla CSS (per-component files)   |
+  <!-- Activity -->
+  ![Last Commit](https://img.shields.io/github/last-commit/H0NEYP0T-466/URDU-CUSTOM-COMPILER?style=for-the-badge&color=purple)
+  ![Commit Activity](https://img.shields.io/github/commit-activity/m/H0NEYP0T-466/URDU-CUSTOM-COMPILER?style=for-the-badge&color=teal)
+  ![Repo Size](https://img.shields.io/github/repo-size/H0NEYP0T-466/URDU-CUSTOM-COMPILER?style=for-the-badge&color=blueviolet)
+  ![Code Size](https://img.shields.io/github/languages/code-size/H0NEYP0T-466/URDU-CUSTOM-COMPILER?style=for-the-badge&color=indigo)
 
-## Language Keywords
+  <!-- Languages -->
+  ![Top Language](https://img.shields.io/github/languages/top/H0NEYP0T-466/URDU-CUSTOM-COMPILER?style=for-the-badge&color=critical)
+  ![Languages Count](https://img.shields.io/github/languages/count/H0NEYP0T-466/URDU-CUSTOM-COMPILER?style=for-the-badge&color=success)
+
+  <!-- Community -->
+  ![Discussions](https://img.shields.io/github/discussions/H0NEYP0T-466/URDU-CUSTOM-COMPILER?style=for-the-badge&color=blue)
+  ![Documentation](https://img.shields.io/badge/Docs-Available-green?style=for-the-badge&logo=readthedocs&logoColor=white)
+  ![Open Source Love](https://img.shields.io/badge/Open%20Source-%E2%9D%A4-red?style=for-the-badge)
+
+</p>
+
+**ایک کسٹم زبان** — A custom programming language compiler and interpreter with **Roman Urdu** syntax. Write code in Urdu using familiar keywords, and watch it compile through a full pipeline: Lexer → Parser → Semantic Analysis → IR Generation → Optimization → Code Generation → Interpretation.
+
+---
+
+## 🔗 Quick Links
+
+| | |
+|---|---|
+| 🌐 **Live Demo** | Run locally (see [Installation](#-installation)) |
+| 📖 **Docs** | This README + inline code docs |
+| 🐛 **Issues** | [GitHub Issues](https://github.com/H0NEYP0T-466/URDU-CUSTOM-COMPILER/issues) |
+| 🤝 **Contributing** | [CONTRIBUTING.md](CONTRIBUTING.md) |
+
+---
+
+## 📑 Table of Contents
+
+- [Features](#-features)
+- [Language Reference](#-language-reference)
+- [Quick Start](#-installation)
+- [Usage Examples](#-usage-examples)
+- [Architecture](#-architecture)
+- [Folder Structure](#-folder-structure)
+- [Tech Stack](#-tech-stack)
+- [Dependencies & Packages](#-dependencies--packages)
+- [Contributing](#-contributing)
+- [License](#-license)
+- [Security](#-security)
+- [Code of Conduct](#-code-of-conduct)
+
+---
+
+## ✨ Features
+
+- 🇵🇰 **Roman Urdu Syntax** — Write code using Urdu keywords (`rakho`, `dikhao`, `agar`, `warna`, `jabtak`)
+- 🔬 **Full Compiler Pipeline** — Lexer → Parser → Semantic Analysis → TAC IR → Optimizer → Python Codegen → Interpreter
+- 🎨 **Web IDE** — Monaco Editor (the same editor as VS Code) with syntax highlighting and error markers
+- 📊 **Compiler Visualization** — View tokens, AST, TAC (Three Address Code), optimized IR, generated Python, and semantic symbol tables in real time
+- ⚡ **Optimization Pass** — Constant folding at the IR level
+- 🔒 **Semantic Analysis** — Type checking, scope resolution, undeclared variable detection
+- 📦 **Block Scoping** — Variables declared inside `agar`/`jabtak` blocks are local to that scope
+- 🐍 **Python Code Generation** — Compiles Urdu code to equivalent Python
+- 🌐 **REST API** — FastAPI backend with a single `POST /run` endpoint
+- 📱 **Responsive Split-Pane UI** — Resizable editor and output panels
+
+---
+
+## 🇵🇰 Language Reference
+
+### Keywords
 
 | Keyword  | Meaning          |
 |----------|------------------|
-| rakho    | declare/assign   |
-| dikhao   | print            |
-| agar     | if               |
-| warna    | else             |
-| jabtak   | while loop       |
-| khatam   | end block        |
-| sahi     | true             |
-| ghalat   | false            |
-| aur      | and              |
-| ya       | or               |
+| `rakho`  | Declare/assign a variable |
+| `dikhao` | Print to output |
+| `agar`   | If statement     |
+| `warna`  | Else clause      |
+| `jabtak` | While loop       |
+| `khatam` | End a block      |
+| `sahi`   | Boolean true     |
+| `ghalat` | Boolean false    |
+| `aur`    | Logical AND      |
+| `ya`     | Logical OR       |
 
-## Quick Start
+### Operators
 
-### Backend
+| Operator | Meaning          |
+|----------|------------------|
+| `+ - * /` | Arithmetic     |
+| `> < >= <= == !=` | Comparison |
+| `!`      | Logical NOT      |
+| `aur`    | Logical AND      |
+| `ya`     | Logical OR       |
+
+### Data Types
+
+- **Numbers** — Integers and floats: `42`, `3.14`
+- **Strings** — Double-quoted: `"Assalam o Alaikum"`
+- **Booleans** — `sahi` (true), `ghalat` (false)
+
+---
+
+## 🚀 Installation
+
+### Prerequisites
+
+- **Python 3.10+** — [Download](https://www.python.org/downloads/)
+- **Node.js 18+** — [Download](https://nodejs.org/)
+
+### Backend Setup
+
 ```bash
 cd backend
+python -m venv venv
+venv\Scripts\activate        # Windows
+# source venv/bin/activate   # macOS/Linux
 pip install -r requirements.txt
 uvicorn main:app --reload --port 8008
 ```
 
-### Frontend
+The API will be available at `http://localhost:8008`.
+
+### Frontend Setup
+
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
 
-Open http://localhost:5173 in your browser.
+Open **http://localhost:5173** in your browser.
 
-## Example Program
+---
+
+## ⚡ Usage Examples
+
+### Example 1: Hello World
+
+```
+rakho naam = "Duniya"
+dikaho "Assalam o Alaikum, "
+dikaho naam
+```
+
+**Output:**
+```
+Assalam o Alaikum,
+Duniya
+```
+
+### Example 2: If/Else
+
 ```
 rakho x = 10
 agar x > 5
@@ -54,21 +168,271 @@ warna
 khatam
 ```
 
-## Architecture
+**Output:**
+```
+x bara hai
+```
+
+### Example 3: While Loop
 
 ```
-backend/
-├── compiler/
-│   ├── lexer.py        # Tokenizer
-│   ├── parser.py       # Recursive-descent parser → AST
-│   └── interpreter.py  # Tree-walk interpreter
-└── main.py             # FastAPI endpoint
-
-frontend/
-├── src/
-│   ├── components/     # Editor, OutputPanel, Toolbar, ExamplesPanel
-│   ├── api/            # REST client
-│   ├── App.tsx         # Main layout
-│   └── index.css       # Design tokens
-└── package.json
+rakho x = 3
+jabtak x > 0
+    dikhao x
+    rakho x = x - 1
+khatam
 ```
+
+**Output:**
+```
+3
+2
+1
+```
+
+### Example 4: Block Scoping
+
+```
+rakho x = 10
+agar x > 5
+    rakho inner = 99
+    dikhao inner
+khatam
+dikhao x
+```
+
+**Output:**
+```
+99
+10
+```
+
+### Example 5: Logical Operators
+
+```
+rakho a = sahi
+rakho b = ghalat
+agar a aur b
+    dikhao "dono sahi hain"
+warna
+    dikhao "koi ek ghalat hai"
+khatam
+```
+
+**Output:**
+```
+koi ek ghalat hai
+```
+
+### API Usage (cURL)
+
+```bash
+curl -X POST http://localhost:8008/run \
+  -H "Content-Type: application/json" \
+  -d '{"code": "rakho x = 42\ndikhao x"}'
+```
+
+**Response:**
+```json
+{
+  "output": "42",
+  "tokens": [...],
+  "ast": "ASSIGN x =\n  NUM 42\nPRINT\n  VAR x",
+  "semantic": { "errors": [], "warnings": [], "symbol_table": {...} },
+  "tac": { "original": [...], "optimized": [...], "changes": [...] },
+  "generated_python": "x = 42\nprint(x)"
+}
+```
+
+---
+
+## 🏗 Architecture
+
+The compiler follows a classic multi-stage pipeline:
+
+```
+┌──────────┐    ┌──────────┐    ┌──────────┐    ┌──────────┐
+│  LEXER   │───▶│  PARSER  │───▶│ SEMANTIC │───▶│    IR    │
+│          │    │          │    │ ANALYZER │    │GENERATOR │
+│ Tokenize │    │ Recursive│    │ Type chk │    │   TAC    │
+│ source   │    │ descent  │    │ Scoping  │    │          │
+└──────────┘    └──────────┘    └──────────┘    └──────────┘
+                                                       │
+                                                       ▼
+┌──────────┐    ┌──────────┐    ┌──────────┐    ┌──────────┐
+│INTERPRETER│◀──│  CODEGEN │◀──│OPTIMIZER │◀──│   TAC    │
+│          │    │          │    │          │    │          │
+│ Tree-walk│    │ Python   │    │ Constant │    │ Three    │
+│ execute  │    │ output   │    │ folding  │    │ Address  │
+└──────────┘    └──────────┘    └──────────┘    └──────────┘
+```
+
+### Pipeline Stages
+
+1. **Lexer** (`compiler/lexer.py`) — Converts source text into tokens. Handles keywords, operators, literals, and comments.
+2. **Parser** (`compiler/parser.py`) — Recursive-descent parser that builds an Abstract Syntax Tree (AST).
+3. **Semantic Analyzer** (`compiler/semantic.py`) — Type checking, scope resolution, undeclared variable detection, scoped symbol table.
+4. **IR Generator** (`compiler/ir_generator.py`) — Converts AST to Three Address Code (TAC).
+5. **Optimizer** (`compiler/optimizer.py`) — Constant folding on TAC instructions.
+6. **Code Generator** (`compiler/codegen.py`) — Translates AST to equivalent Python source code.
+7. **Interpreter** (`compiler/interpreter.py`) — Tree-walk interpreter that executes the AST directly.
+
+---
+
+## 📂 Folder Structure
+
+```
+URDU-CUSTOM-COMPILER/
+├── backend/
+│   ├── compiler/              # Core compiler package
+│   │   ├── __init__.py        # Package exports
+│   │   ├── lexer.py           # Tokenizer
+│   │   ├── parser.py          # Recursive-descent parser → AST
+│   │   ├── semantic.py        # Semantic analysis & type checking
+│   │   ├── ir_generator.py    # Three Address Code generation
+│   │   ├── optimizer.py       # Constant folding optimization
+│   │   ├── codegen.py         # Python code generation
+│   │   ├── interpreter.py     # Tree-walk interpreter
+│   │   └── pretty_printer.py  # Terminal output formatting
+│   ├── main.py                # FastAPI application & /run endpoint
+│   ├── test_pipeline.py       # Integration tests
+│   ├── requirements.txt       # Python dependencies
+│   └── run_commands.txt       # Quick start commands
+│
+├── frontend/
+│   ├── src/
+│   │   ├── api/
+│   │   │   └── compiler.ts    # REST API client
+│   │   ├── components/
+│   │   │   ├── Editor.tsx     # Monaco code editor
+│   │   │   ├── Editor.css
+│   │   │   ├── OutputPanel.tsx    # Execution output display
+│   │   │   ├── OutputPanel.css
+│   │   │   ├── TACPanel.tsx       # TAC visualization
+│   │   │   ├── TACPanel.css
+│   │   │   ├── SemanticPanel.tsx  # Symbol table display
+│   │   │   ├── SemanticPanel.css
+│   │   │   ├── PythonPanel.tsx    # Generated Python view
+│   │   │   ├── PythonPanel.css
+│   │   │   ├── ExamplesPanel.tsx  # Example programs sidebar
+│   │   │   ├── ExamplesPanel.css
+│   │   │   ├── Toolbar.tsx        # Run / Clear / Toggle buttons
+│   │   │   └── Toolbar.css
+│   │   ├── types/
+│   │   │   └── compiler.ts    # TypeScript interfaces
+│   │   ├── App.tsx            # Main application layout
+│   │   ├── App.css
+│   │   ├── main.tsx           # React entry point
+│   │   └── index.css          # Global design tokens
+│   ├── visuals/               # Screenshots & assets
+│   ├── package.json
+│   ├── tsconfig.json
+│   └── vite.config.ts
+│
+├── .github/
+│   ├── ISSUE_TEMPLATE/
+│   │   ├── bug_report.yml
+│   │   ├── feature_request.yml
+│   │   └── config.yml
+│   └── pull_request_template.md
+│
+├── LICENSE
+├── CONTRIBUTING.md
+├── SECURITY.md
+├── CODE_OF_CONDUCT.md
+└── README.md
+```
+
+---
+
+## 🛠 Tech Stack
+
+### Languages
+![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
+![CSS3](https://img.shields.io/badge/CSS3-1572B6?style=for-the-badge&logo=css3&logoColor=white)
+![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&logo=html5&logoColor=white)
+
+### Frameworks & Libraries
+![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)
+![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
+![Vite](https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white)
+![Monaco Editor](https://img.shields.io/badge/Monaco_Editor-68217A?style=for-the-badge&logo=visualstudiocode&logoColor=white)
+
+### DevOps / CI / Tools
+![Pydantic](https://img.shields.io/badge/Pydantic-E92063?style=for-the-badge&logo=pydantic&logoColor=white)
+![Uvicorn](https://img.shields.io/badge/Uvicorn-009688?style=for-the-badge&logo=fastapi&logoColor=white)
+![npm](https://img.shields.io/badge/npm-CB3837?style=for-the-badge&logo=npm&logoColor=white)
+![Git](https://img.shields.io/badge/Git-F05032?style=for-the-badge&logo=git&logoColor=white)
+![GitHub](https://img.shields.io/badge/GitHub-181717?style=for-the-badge&logo=github&logoColor=white)
+
+---
+
+## 📦 Dependencies & Packages
+
+### Runtime Dependencies
+
+<details>
+<summary><strong>🐍 Python (Backend)</strong></summary>
+
+| Package | Version | Description |
+|---------|---------|-------------|
+| ![FastAPI](https://img.shields.io/pypi/v/fastapi?style=for-the-badge&label=fastapi) | v0.115+ | High-performance async web framework |
+| ![Uvicorn](https://img.shields.io/pypi/v/uvicorn?style=for-the-badge&label=uvicorn) | v0.34+ | ASGI server for running FastAPI |
+| ![Pydantic](https://img.shields.io/pypi/v/pydantic?style=for-the-badge&label=pydantic) | v2.10+ | Data validation using Python type annotations |
+
+</details>
+
+<details>
+<summary><strong>⚛️ Node.js (Frontend)</strong></summary>
+
+| Package | Version | Description |
+|---------|---------|-------------|
+| ![React](https://img.shields.io/npm/v/react?style=for-the-badge&label=react) | v19.2.5 | UI component library |
+| ![React DOM](https://img.shields.io/npm/v/react-dom?style=for-the-badge&label=react--dom) | v19.2.5 | React rendering for the DOM |
+| ![Monaco Editor](https://img.shields.io/npm/v/@monaco-editor/react?style=for-the-badge&label=@monaco-editor%2Freact) | v4.7.0 | VS Code's code editor as a React component |
+
+</details>
+
+### Dev / Build / Test Dependencies
+
+<details>
+<summary><strong>⚛️ Node.js (Frontend)</strong></summary>
+
+| Package | Version | Description |
+|---------|---------|-------------|
+| ![TypeScript](https://img.shields.io/npm/v/typescript?style=for-the-badge&label=typescript) | v6.0.2 | Typed superset of JavaScript |
+| ![Vite](https://img.shields.io/npm/v/vite?style=for-the-badge&label=vite) | v8.0.10 | Next-gen frontend build tool |
+| ![Vite Plugin React](https://img.shields.io/npm/v/@vitejs/plugin-react?style=for-the-badge&label=@vitejs%2Fplugin--react) | v6.0.1 | Fast Refresh for Vite + React |
+| ![@types/react](https://img.shields.io/npm/v/@types/react?style=for-the-badge&label=@types%2Freact) | v19.2.14 | TypeScript types for React |
+| ![@types/react-dom](https://img.shields.io/npm/v/@types/react-dom?style=for-the-badge&label=@types%2Freact--dom) | v19.2.3 | TypeScript types for React DOM |
+
+</details>
+
+---
+
+## 🤝 Contributing
+
+We welcome contributions! Please read our [Contributing Guide](CONTRIBUTING.md) for details on how to get started, code style guidelines, and the PR process.
+
+---
+
+## 📜 License
+
+This project is licensed under the [MIT License](LICENSE).
+
+---
+
+## 🛡 Security
+
+See our [Security Policy](SECURITY.md) for information on reporting vulnerabilities and known security considerations.
+
+---
+
+## 📏 Code of Conduct
+
+This project adheres to the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.md). By participating, you are expected to uphold this code.
+
+---
+
+<p align="center">Made with ❤ by <a href="https://github.com/H0NEYP0T-466">H0NEYP0T-466</a></p>

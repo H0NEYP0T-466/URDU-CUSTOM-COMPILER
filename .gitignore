@@ -9,7 +9,7 @@ __pycache__/
 .venv/
 venv/
 env/
-
+.claude
 # Build output
 dist/
 dist-ssr/
