@@ -53,6 +53,8 @@
   transition: all var(--transition-fast);
   position: relative;
   overflow: hidden;
+  flex-shrink: 0;
+  text-align: left;
 }
 
 .examples-panel__card::before {

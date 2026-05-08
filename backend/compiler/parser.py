@@ -1,6 +1,7 @@
 """
 Urdu Custom Compiler - Parser (Recursive-Descent)
 Converts tokens into an AST. No external libraries used.
+Provides helpful error messages with "did you mean?" suggestions.
 """
 
 from __future__ import annotations
@@ -9,7 +10,7 @@ from typing import List, Optional, Union
 from .lexer import Token, TokenType
 
 
-# ── AST Nodes ──
+# -- AST Nodes --
 
 @dataclass
 class NumberNode:
@@ -65,10 +66,104 @@ ASTNode = Union[
 ]
 
 
+# -- All valid keywords for "did you mean?" --
+ALL_KEYWORDS = {
+    "rakho": "variable assign karo (declare/assign)",
+    "dikhao": "screen pe dikhao (print)",
+    "agar": "agar condition sahi ho toh (if)",
+    "warna": "nahi toh (else)",
+    "jabtak": "jab tak condition sahi rahe (while loop)",
+    "khatam": "block ka end (end block)",
+    "sahi": "boolean true value",
+    "ghalat": "boolean false value",
+    "aur": "logical AND operator",
+    "ya": "logical OR operator",
+}
+
+
 class ParseError(Exception):
     def __init__(self, message: str, line: int):
         self.line = line
         super().__init__(f"Parser Ghalati (line {line}): {message}")
+
+
+def _levenshtein(a: str, b: str) -> int:
+    """Simple Levenshtein edit distance."""
+    if len(a) < len(b):
+        return _levenshtein(b, a)
+    if len(b) == 0:
+        return len(a)
+    prev = list(range(len(b) + 1))
+    for i, ca in enumerate(a):
+        curr = [i + 1]
+        for j, cb in enumerate(b):
+            cost = 0 if ca == cb else 1
+            curr.append(min(curr[j] + 1, prev[j + 1] + 1, prev[j] + cost))
+        prev = curr
+    return prev[len(b)]
+
+
+def _suggest_keyword(word: str) -> Optional[str]:
+    """Find the closest keyword if the word is a likely typo (distance <= 2)."""
+    best_match = None
+    best_dist = 3  # only suggest if distance <= 2
+    for kw in ALL_KEYWORDS:
+        dist = _levenshtein(word.lower(), kw.lower())
+        if dist < best_dist:
+            best_dist = dist
+            best_match = kw
+    return best_match
+
+
+def _build_helpful_error(tok: Token) -> str:
+    """Build a helpful, descriptive error message based on what was found."""
+    word = tok.value
+
+    # Check for common typos of keywords
+    suggestion = _suggest_keyword(word)
+    if suggestion and suggestion != word:
+        meaning = ALL_KEYWORDS[suggestion]
+        return (
+            f"'{word}' koi valid keyword nahi hai. "
+            f"Kya aap '{suggestion}' likhna chahte the? "
+            f"({suggestion} = {meaning})"
+        )
+
+    # Give specific guidance based on what was found
+    if tok.type == TokenType.IDENTIFIER:
+        return (
+            f"'{word}' ek variable naam hai, lekin yahan pe statement hona chahiye. "
+            f"Har line 'rakho' (assign), 'dikhao' (print), 'agar' (if), ya 'jabtak' (while) se shuru honi chahiye."
+        )
+
+    if tok.type == TokenType.NUMBER or tok.type == TokenType.FLOAT:
+        return (
+            f"Yahan number '{word}' mila, lekin statement expected thi. "
+            f"Number assign karne ke liye: rakho x = {word}"
+        )
+
+    if tok.type == TokenType.STRING:
+        return (
+            f"Yahan string mila, lekin statement expected thi. "
+            f"String print karne ke liye: dikhao \"{word}\""
+        )
+
+    if tok.type == TokenType.OPERATOR:
+        return (
+            f"Operator '{word}' yahan nahi aa sakta. "
+            f"Pehle ek statement likho jaise: rakho x = 5 {word} 3"
+        )
+
+    if tok.type == TokenType.EOF:
+        return (
+            f"Code achanak khatam ho gaya. "
+            f"Kya aap 'khatam' likhna bhool gaye agar/jabtak block ke end mein?"
+        )
+
+    return (
+        f"'{word}' yahan expected nahi tha. "
+        f"Valid statements hain: rakho (assign), dikhao (print), agar (if), jabtak (while)"
+    )
 
 
 class Parser:
@@ -89,9 +184,33 @@ class Parser:
     def _expect(self, token_type: TokenType, value: Optional[str] = None) -> Token:
         tok = self._current()
         if tok.type != token_type:
-            raise ParseError(f"'{value or token_type.name}' expected, lekin '{tok.value}' mila", tok.line)
+            # More helpful messages for common expectations
+            if value == "khatam":
+                raise ParseError(
+                    f"'khatam' expected tha block band karne ke liye, lekin '{tok.value}' mila. "
+                    f"Har 'agar' aur 'jabtak' ke baad 'khatam' likhna zaruri hai.",
+                    tok.line
+                )
+            if value == "=":
+                raise ParseError(
+                    f"'=' expected tha assignment mein. Sahi tarika: rakho variable_naam = value",
+                    tok.line
+                )
+            raise ParseError(
+                f"'{value or token_type.name}' expected, lekin '{tok.value}' mila",
+                tok.line
+            )
         if value is not None and tok.value != value:
-            raise ParseError(f"'{value}' expected, lekin '{tok.value}' mila", tok.line)
+            if value == "khatam":
+                suggestion = _suggest_keyword(tok.value)
+                msg = f"'khatam' expected tha block band karne ke liye, lekin '{tok.value}' mila."
+                if suggestion:
+                    msg += f" Kya aap '{suggestion}' likhna chahte the?"
+                raise ParseError(msg, tok.line)
+            raise ParseError(
+                f"'{value}' expected, lekin '{tok.value}' mila",
+                tok.line
+            )
         return self._advance()
 
     def _skip_newlines(self) -> None:
@@ -111,7 +230,11 @@ class Parser:
         stmts = self._parse_block(top_level=True)
         if self._current().type != TokenType.EOF:
             tok = self._current()
-            raise ParseError(f"Unexpected token: '{tok.value}'", tok.line)
+            raise ParseError(
+                f"Unexpected token: '{tok.value}'. "
+                f"Kya extra 'khatam' ya koi aur cheez reh gayi hai?",
+                tok.line
+            )
         return stmts
 
     def _parse_block(self, top_level: bool = False) -> List[ASTNode]:
@@ -139,8 +262,23 @@ class Parser:
             elif tok.value == "jabtak":
                 return self._parse_while()
             else:
-                raise ParseError(f"Unexpected keyword: '{tok.value}'", tok.line)
-        raise ParseError(f"Statement expected, lekin '{tok.value}' mila", tok.line)
+                # Unknown keyword - give helpful suggestion
+                suggestion = _suggest_keyword(tok.value)
+                if suggestion:
+                    meaning = ALL_KEYWORDS.get(suggestion, "")
+                    raise ParseError(
+                        f"'{tok.value}' ek valid statement keyword nahi hai. "
+                        f"Kya aap '{suggestion}' likhna chahte the? ({meaning})",
+                        tok.line
+                    )
+                raise ParseError(
+                    f"'{tok.value}' yahan use nahi ho sakta. "
+                    f"Statement 'rakho', 'dikhao', 'agar', ya 'jabtak' se shuru honi chahiye.",
+                    tok.line
+                )
+
+        # Not a keyword - build helpful error
+        raise ParseError(_build_helpful_error(tok), tok.line)
 
     def _parse_assign(self) -> AssignNode:
         self._advance()
@@ -175,7 +313,7 @@ class Parser:
         self._expect(TokenType.KEYWORD, "khatam")
         return WhileNode(condition=condition, body=body)
 
-    # ── Expression parsing with operator precedence ──
+    # -- Expression parsing with operator precedence --
 
     def _parse_expression(self) -> ASTNode:
         return self._parse_or()
@@ -253,4 +391,17 @@ class Parser:
             expr = self._parse_expression()
             self._expect(TokenType.RPAREN, ")")
             return expr
-        raise ParseError(f"Expression expected, lekin '{tok.value}' mila", tok.line)
+
+        # Helpful error for expression context
+        if tok.type == TokenType.KEYWORD:
+            raise ParseError(
+                f"Yahan ek value (number, string, variable) expected thi, lekin keyword '{tok.value}' mila. "
+                f"Keyword ko value ki jagah use nahi kar sakte.",
+                tok.line
+            )
+
+        raise ParseError(
+            f"Expression mein '{tok.value}' expected nahi tha. "
+            f"Yahan number, string, variable, ya (expression) hona chahiye.",
+            tok.line
+        )
