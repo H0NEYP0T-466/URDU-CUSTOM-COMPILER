@@ -1,15 +1,17 @@
 """
-Urdu Custom Compiler — Semantic Analyzer
+Urdu Custom Compiler -- Semantic Analyzer
 Walks the AST before interpretation to catch errors statically:
   1. Undefined variable references
   2. Re-declaration warnings
   3. Type mismatch in operations
   4. Static division by zero
+  5. Block scoping (agar/jabtak create child scopes)
 """
 
 from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
+
 
 from .parser import (
     ASTNode, NumberNode, StringNode, BoolNode, VarNode,
@@ -17,7 +19,7 @@ from .parser import (
 )
 
 
-# ── Type constants ──
+# -- Type constants --
 TYPE_INT = "int"
 TYPE_FLOAT = "float"
 TYPE_STRING = "string"
@@ -31,11 +33,21 @@ COMPARISON_OPS = {">", "<", ">=", "<="}
 
 
 @dataclass
+class SymbolEntry:
+    """A single entry in the symbol table."""
+    name: str
+    var_type: str
+    scope: str           # e.g. "global", "agar:1", "jabtak:2"
+    scope_depth: int     # 0 = global, 1 = first nesting, etc.
+
+
+@dataclass
 class SemanticResult:
     """Result of semantic analysis."""
     errors: List[str] = field(default_factory=list)
     warnings: List[str] = field(default_factory=list)
     symbol_table: Dict[str, str] = field(default_factory=dict)
+    scoped_symbols: List[SymbolEntry] = field(default_factory=list)
 
 
 class SemanticError(Exception):
@@ -44,9 +56,40 @@ class SemanticError(Exception):
         super().__init__(f"Semantic Ghalati: {message}")
 
 
+class Scope:
+    """A single lexical scope that holds variable->type mappings."""
+
+    def __init__(self, name: str, depth: int, parent: Optional["Scope"] = None):
+        self.name = name
+        self.depth = depth
+        self.parent = parent
+        self.variables: Dict[str, str] = {}
+
+    def define(self, var_name: str, var_type: str) -> None:
+        """Define a variable in this scope."""
+        self.variables[var_name] = var_type
+
+    def lookup(self, var_name: str) -> Optional[str]:
+        """Look up a variable, walking up the scope chain."""
+        if var_name in self.variables:
+            return self.variables[var_name]
+        if self.parent:
+            return self.parent.lookup(var_name)
+        return None
+
+    def is_defined_locally(self, var_name: str) -> bool:
+        """Check if a variable is defined in THIS scope (not parent)."""
+        return var_name in self.variables
+
+    def is_defined_anywhere(self, var_name: str) -> bool:
+        """Check if a variable is defined anywhere in the scope chain."""
+        return self.lookup(var_name) is not None
+
+
 class SemanticAnalyzer:
     """
     Walks the AST and performs static checks before interpretation.
+    Uses a scope stack for block scoping.
 
     Usage:
         result = SemanticAnalyzer().analyze(ast_nodes)
@@ -54,26 +97,58 @@ class SemanticAnalyzer:
     """
 
     def __init__(self) -> None:
-        self.symbol_table: Dict[str, str] = {}   # var_name → type_string
         self.errors: List[str] = []
         self.warnings: List[str] = []
+        self.all_symbols: List[SymbolEntry] = []
+        self._scope_counter = 0
+
+        # Initialize global scope
+        self.global_scope = Scope("global", 0)
+        self.current_scope = self.global_scope
 
     def analyze(self, ast_nodes: List[ASTNode]) -> SemanticResult:
         """Analyze all top-level statements and return result."""
-        self.symbol_table = {}
         self.errors = []
         self.warnings = []
+        self.all_symbols = []
+        self._scope_counter = 0
+        self.global_scope = Scope("global", 0)
+        self.current_scope = self.global_scope
 
         for node in ast_nodes:
             self._check_node(node)
 
+        # Build flat symbol_table (for backward compat) from all scopes
+        flat_table: Dict[str, str] = {}
+        for entry in self.all_symbols:
+            key = entry.name if entry.scope == "global" else f"{entry.name} ({entry.scope})"
+            flat_table[key] = entry.var_type
+
         return SemanticResult(
             errors=list(self.errors),
             warnings=list(self.warnings),
-            symbol_table=dict(self.symbol_table),
+            symbol_table=flat_table,
+            scoped_symbols=list(self.all_symbols),
         )
 
-    # ── Statement checking ──
+    # -- Scope management --
+
+    def _push_scope(self, scope_name: str) -> None:
+        """Create and enter a new child scope."""
+        self._scope_counter += 1
+        new_scope = Scope(
+            name=f"{scope_name}:{self._scope_counter}",
+            depth=self.current_scope.depth + 1,
+            parent=self.current_scope,
+        )
+        self.current_scope = new_scope
+
+    def _pop_scope(self) -> None:
+        """Exit the current scope and return to parent."""
+        if self.current_scope.parent:
+            self.current_scope = self.current_scope.parent
+
+    # -- Statement checking --
 
     def _check_node(self, node: ASTNode) -> None:
         """Check a single statement node for semantic errors."""
@@ -83,30 +158,49 @@ class SemanticAnalyzer:
             self._check_expr(node.expr)
         elif isinstance(node, IfNode):
             self._check_expr(node.condition)
+            # agar body gets its own scope
+            self._push_scope("agar")
             for stmt in node.body:
                 self._check_node(stmt)
-            for stmt in node.else_body:
-                self._check_node(stmt)
+            self._pop_scope()
+            # warna body gets its own scope
+            if node.else_body:
+                self._push_scope("warna")
+                for stmt in node.else_body:
+                    self._check_node(stmt)
+                self._pop_scope()
         elif isinstance(node, WhileNode):
             self._check_expr(node.condition)
+            # jabtak body gets its own scope
+            self._push_scope("jabtak")
             for stmt in node.body:
                 self._check_node(stmt)
+            self._pop_scope()
 
     def _check_assign(self, node: AssignNode) -> None:
-        """Check assignment: warn on re-declaration, infer type."""
-        # Re-declaration warning
-        if node.name in self.symbol_table:
+        """Check assignment: warn on re-declaration in same scope, infer type."""
+        # Re-declaration warning (only within same scope)
+        if self.current_scope.is_defined_locally(node.name):
             self.warnings.append(
-                f"Variable '{node.name}' pehle se defined hai -- dubara assign ho rahi hai"
+                f"Variable '{node.name}' is scope mein pehle se defined hai -- dubara assign ho rahi hai"
             )
 
         # Check the value expression
         expr_type = self._check_expr(node.value_expr)
+        resolved_type = expr_type or TYPE_UNKNOWN
 
-        # Store inferred type
-        self.symbol_table[node.name] = expr_type or TYPE_UNKNOWN
+        # Define in current scope
+        self.current_scope.define(node.name, resolved_type)
 
-    # ── Expression checking (returns inferred type) ──
+        # Track for symbol table output
+        self.all_symbols.append(SymbolEntry(
+            name=node.name,
+            var_type=resolved_type,
+            scope=self.current_scope.name,
+            scope_depth=self.current_scope.depth,
+        ))
+
+    # -- Expression checking (returns inferred type) --
 
     def _check_expr(self, node: ASTNode) -> Optional[str]:
         """Check an expression node and return its inferred type string."""
@@ -138,13 +232,14 @@ class SemanticAnalyzer:
         return TYPE_UNKNOWN
 
     def _check_var(self, node: VarNode) -> Optional[str]:
-        """Check that a variable is defined, return its type."""
-        if node.name not in self.symbol_table:
+        """Check that a variable is defined in current or parent scope."""
+        result = self.current_scope.lookup(node.name)
+        if result is None:
             self.errors.append(
                 f"Variable '{node.name}' defined nahi hai -- pehle 'rakho' se assign karo"
             )
             return TYPE_UNKNOWN
-        return self.symbol_table[node.name]
+        return result
 
     def _check_binop(self, node: BinOpNode) -> Optional[str]:
         """Check a binary operation for type compatibility."""
@@ -158,11 +253,11 @@ class SemanticAnalyzer:
                 f"Zero (0) se divide nahi kar sakte -- division by zero"
             )
 
-        # Logical operators — any type is fine
+        # Logical operators -- any type is fine
         if op in ("aur", "ya"):
             return TYPE_BOOL
 
-        # Comparison operators — need numeric operands (except == and !=)
+        # Comparison operators -- need numeric operands (except == and !=)
         if op in COMPARISON_OPS:
             if left_type == TYPE_STRING or right_type == TYPE_STRING:
                 self.errors.append(
@@ -185,7 +280,7 @@ class SemanticAnalyzer:
                     )
                 return TYPE_UNKNOWN
 
-        # Arithmetic operators — need numeric operands
+        # Arithmetic operators -- need numeric operands
         if op in ("-", "*", "/"):
             if left_type == TYPE_STRING:
                 self.errors.append(

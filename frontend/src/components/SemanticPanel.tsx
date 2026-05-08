@@ -5,6 +5,18 @@ interface SemanticPanelProps {
   data: SemanticInfo | null;
 }
 
+/** Scope depth indicator dots */
+function scopeIndent(depth: number): string {
+  return "\u00A0\u00A0".repeat(depth); // non-breaking spaces
+}
+
+/** Color class by scope depth */
+function scopeClass(depth: number): string {
+  if (depth === 0) return "semantic-panel__scope--global";
+  if (depth === 1) return "semantic-panel__scope--local";
+  return "semantic-panel__scope--nested";
+}
+
 export default function SemanticPanel({ data }: SemanticPanelProps) {
   if (!data) {
     return (
@@ -17,7 +29,8 @@ export default function SemanticPanel({ data }: SemanticPanelProps) {
     );
   }
 
-  const hasSymbols = Object.keys(data.symbol_table).length > 0;
+  const hasScoped = data.scoped_symbols && data.scoped_symbols.length > 0;
+  const hasFlat = Object.keys(data.symbol_table).length > 0;
   const noIssues = data.errors.length === 0 && data.warnings.length === 0;
 
   return (
@@ -26,12 +39,55 @@ export default function SemanticPanel({ data }: SemanticPanelProps) {
       {data.errors.length === 0 && (
         <div className="semantic-panel__success">
           <span className="semantic-panel__success-icon">✅</span>
-          Semantic check passed — koi error nahi
+          Semantic check passed -- koi error nahi
         </div>
       )}
 
-      {/* Symbol Table */}
-      {hasSymbols && (
+      {/* Scoped Symbol Table (preferred) */}
+      {hasScoped && (
+        <div>
+          <div className="semantic-panel__section-title">
+            📋 Scoped Symbol Table
+          </div>
+          <table className="semantic-panel__table">
+            <thead>
+              <tr>
+                <th>Variable</th>
+                <th>Type</th>
+                <th>Scope</th>
+                <th>Depth</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.scoped_symbols.map((entry, i) => (
+                <tr key={i}>
+                  <td>
+                    <span className="semantic-panel__var-name">
+                      {scopeIndent(entry.scope_depth)}{entry.name}
+                    </span>
+                  </td>
+                  <td>
+                    <span className="semantic-panel__var-type">{entry.var_type}</span>
+                  </td>
+                  <td>
+                    <span className={`semantic-panel__scope ${scopeClass(entry.scope_depth)}`}>
+                      {entry.scope}
+                    </span>
+                  </td>
+                  <td>
+                    <span className={scopeClass(entry.scope_depth)}>
+                      {entry.scope_depth}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Fallback: flat symbol table */}
+      {!hasScoped && hasFlat && (
         <div>
           <div className="semantic-panel__section-title">
             📋 Symbol Table
@@ -90,7 +146,7 @@ export default function SemanticPanel({ data }: SemanticPanelProps) {
       )}
 
       {/* If truly empty */}
-      {!hasSymbols && noIssues && (
+      {!hasScoped && !hasFlat && noIssues && (
         <div className="semantic-panel__empty">
           <div>Koi variable ya issue nahi mila</div>
         </div>

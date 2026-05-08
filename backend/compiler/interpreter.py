@@ -1,9 +1,10 @@
 """
 Urdu Custom Compiler - Tree-Walk Interpreter
-Evaluates AST nodes recursively, maintains symbol table, collects output.
+Evaluates AST nodes recursively, maintains scoped symbol table, collects output.
+Supports block scoping: variables in agar/jabtak blocks are local.
 """
 
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Optional, Union
 from .parser import (
     ASTNode, NumberNode, StringNode, BoolNode, VarNode,
     BinOpNode, UnaryOpNode, AssignNode, PrintNode, IfNode, WhileNode,
@@ -20,9 +21,55 @@ class UrduRuntimeError(Exception):
         super().__init__(f"Ghalati: {message}")
 
 
+class Environment:
+    """A lexical scope that holds variable bindings."""
+
+    def __init__(self, parent: Optional["Environment"] = None):
+        self.variables: Dict[str, Any] = {}
+        self.parent = parent
+
+    def get(self, name: str) -> Any:
+        """Look up a variable, walking up the scope chain."""
+        if name in self.variables:
+            return self.variables[name]
+        if self.parent:
+            return self.parent.get(name)
+        raise UrduRuntimeError(f"'{name}' defined nahi hai")
+
+    def set(self, name: str, value: Any) -> None:
+        """Set a variable in this scope. If it exists in a parent scope, update there."""
+        # Check if variable exists in current scope first
+        if name in self.variables:
+            self.variables[name] = value
+            return
+        # Check if it exists in any parent scope (for reassignment like rakho x = x - 1)
+        if self.parent and self._exists_in_parent(name):
+            self.parent.set(name, value)
+            return
+        # New variable: define in current scope
+        self.variables[name] = value
+
+    def _exists_in_parent(self, name: str) -> bool:
+        """Check if variable exists anywhere in the parent chain."""
+        if self.parent is None:
+            return False
+        if name in self.parent.variables:
+            return True
+        return self.parent._exists_in_parent(name)
+
+    def has(self, name: str) -> bool:
+        """Check if a variable exists in this scope or any parent."""
+        if name in self.variables:
+            return True
+        if self.parent:
+            return self.parent.has(name)
+        return False
+
+
 class Interpreter:
     """
     Tree-walk interpreter for the Urdu language AST.
+    Supports block scoping for agar/jabtak blocks.
 
     Usage:
         interp = Interpreter()
@@ -30,24 +77,24 @@ class Interpreter:
     """
 
     def __init__(self) -> None:
-        self.variables: Dict[str, Any] = {}
+        self.env = Environment()    # global environment
         self.output: List[str] = []
 
     def execute(self, statements: List[ASTNode]) -> List[str]:
         """Execute a list of AST statements and return collected output lines."""
-        self.variables = {}
+        self.env = Environment()
         self.output = []
         for stmt in statements:
             self._exec_node(stmt)
         return self.output
 
-    # ── Statement execution ──
+    # -- Statement execution --
 
     def _exec_node(self, node: ASTNode) -> None:
         """Execute a single statement node."""
         if isinstance(node, AssignNode):
             value = self._eval(node.value_expr)
-            self.variables[node.name] = value
+            self.env.set(node.name, value)
 
         elif isinstance(node, PrintNode):
             value = self._eval(node.expr)
@@ -56,11 +103,18 @@ class Interpreter:
         elif isinstance(node, IfNode):
             condition = self._eval(node.condition)
             if self._is_truthy(condition):
+                # Create a new scope for the if body
+                self.env = Environment(parent=self.env)
                 for stmt in node.body:
                     self._exec_node(stmt)
+                self.env = self.env.parent  # pop scope
             else:
-                for stmt in node.else_body:
-                    self._exec_node(stmt)
+                if node.else_body:
+                    # Create a new scope for the else body
+                    self.env = Environment(parent=self.env)
+                    for stmt in node.else_body:
+                        self._exec_node(stmt)
+                    self.env = self.env.parent  # pop scope
 
         elif isinstance(node, WhileNode):
             iterations = 0
@@ -68,15 +122,18 @@ class Interpreter:
                 iterations += 1
                 if iterations > MAX_ITERATIONS:
                     raise UrduRuntimeError(
-                        f"Loop {MAX_ITERATIONS} iterations se zyada chal gaya — infinite loop?"
+                        f"Loop {MAX_ITERATIONS} iterations se zyada chal gaya -- infinite loop?"
                     )
+                # Create a new scope for each iteration
+                self.env = Environment(parent=self.env)
                 for stmt in node.body:
                     self._exec_node(stmt)
+                self.env = self.env.parent  # pop scope
 
         else:
             raise UrduRuntimeError(f"Unknown statement type: {type(node).__name__}")
 
-    # ── Expression evaluation ──
+    # -- Expression evaluation --
 
     def _eval(self, node: ASTNode) -> Any:
         """Evaluate an expression node and return its value."""
@@ -90,9 +147,7 @@ class Interpreter:
             return node.value
 
         if isinstance(node, VarNode):
-            if node.name not in self.variables:
-                raise UrduRuntimeError(f"'{node.name}' defined nahi hai")
-            return self.variables[node.name]
+            return self.env.get(node.name)
 
         if isinstance(node, UnaryOpNode):
             operand = self._eval(node.operand)
@@ -164,7 +219,7 @@ class Interpreter:
 
         raise UrduRuntimeError(f"Unknown operator: '{op}'")
 
-    # ── Helpers ──
+    # -- Helpers --
 
     @staticmethod
     def _is_truthy(value: Any) -> bool:

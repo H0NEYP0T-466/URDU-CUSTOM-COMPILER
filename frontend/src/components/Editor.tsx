@@ -1,11 +1,13 @@
-import { useRef, useCallback } from "react";
+import { useRef, useCallback, useEffect } from "react";
 import MonacoEditor, { type OnMount } from "@monaco-editor/react";
 import type { editor } from "monaco-editor";
+import type { ErrorMarker } from "../types/compiler";
 import "./Editor.css";
 
 interface EditorProps {
   code: string;
   onChange: (value: string) => void;
+  errorMarkers?: ErrorMarker[];
 }
 
 /** Urdu language keywords for custom highlighting */
@@ -15,11 +17,13 @@ const URDU_KEYWORDS = [
   "aur", "ya",
 ];
 
-export default function Editor({ code, onChange }: EditorProps) {
+export default function Editor({ code, onChange, errorMarkers = [] }: EditorProps) {
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
+  const monacoRef = useRef<typeof import("monaco-editor") | null>(null);
 
   const handleMount: OnMount = useCallback((editorInstance, monaco) => {
     editorRef.current = editorInstance;
+    monacoRef.current = monaco;
 
     // Register custom language
     monaco.languages.register({ id: "urdu-lang" });
@@ -78,6 +82,40 @@ export default function Editor({ code, onChange }: EditorProps) {
     editorInstance.focus();
   }, []);
 
+  // -- Error markers: update whenever errorMarkers change --
+  useEffect(() => {
+    const editorInstance = editorRef.current;
+    const monaco = monacoRef.current;
+    if (!editorInstance || !monaco) return;
+
+    const model = editorInstance.getModel();
+    if (!model) return;
+
+    if (errorMarkers.length === 0) {
+      // Clear all markers
+      monaco.editor.setModelMarkers(model, "urdu-compiler", []);
+      return;
+    }
+
+    const markers: editor.IMarkerData[] = errorMarkers.map((marker) => {
+      const lineNumber = Math.max(1, Math.min(marker.line, model.getLineCount()));
+      const lineContent = model.getLineContent(lineNumber);
+      return {
+        severity:
+          marker.severity === "error"
+            ? monaco.MarkerSeverity.Error
+            : monaco.MarkerSeverity.Warning,
+        message: marker.message,
+        startLineNumber: lineNumber,
+        startColumn: 1,
+        endLineNumber: lineNumber,
+        endColumn: lineContent.length + 1,
+      };
+    });
+
+    monaco.editor.setModelMarkers(model, "urdu-compiler", markers);
+  }, [errorMarkers]);
+
   const handleChange = useCallback(
     (value: string | undefined) => {
       onChange(value ?? "");
@@ -120,6 +158,7 @@ export default function Editor({ code, onChange }: EditorProps) {
             wordWrap: "on",
             tabSize: 4,
             automaticLayout: true,
+            glyphMargin: true,
           }}
         />
       </div>

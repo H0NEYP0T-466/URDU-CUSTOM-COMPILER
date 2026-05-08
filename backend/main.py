@@ -1,10 +1,11 @@
 """
 Urdu Custom Compiler - FastAPI Backend
 Single endpoint: POST /run
-Full pipeline: Lexer → Parser → Semantic → IR → Optimizer → CodeGen → Interpreter
-Prints beautiful terminal output for every stage.
+Full pipeline: Lexer -> Parser -> Semantic -> IR -> Optimizer -> CodeGen -> Interpreter
+Prints beautiful terminal output for every stage including scoped symbol table.
 """
 
+import re
 import time
 from typing import Optional
 from fastapi import FastAPI
@@ -30,10 +31,10 @@ from compiler.pretty_printer import (
 app = FastAPI(
     title="Urdu Custom Compiler",
     description="A Roman-Urdu programming language interpreter",
-    version="2.0.0",
+    version="2.1.0",
 )
 
-# CORS — allow all origins for dev
+# CORS -- allow all origins for dev
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -43,7 +44,7 @@ app.add_middleware(
 )
 
 
-# ── Request / Response Models ──
+# -- Request / Response Models --
 
 class RunRequest(BaseModel):
     code: str
@@ -56,10 +57,18 @@ class TokenInfo(BaseModel):
     line: int
 
 
+class SymbolEntryInfo(BaseModel):
+    name: str
+    var_type: str
+    scope: str
+    scope_depth: int
+
+
 class SemanticInfo(BaseModel):
     errors: list[str]
     warnings: list[str]
     symbol_table: dict[str, str]
+    scoped_symbols: list[SymbolEntryInfo] = []
 
 
 class TACInfo(BaseModel):
@@ -68,9 +77,17 @@ class TACInfo(BaseModel):
     changes: list[str]
 
 
+class ErrorMarker(BaseModel):
+    line: int
+    message: str
+    severity: str   # "error" | "warning"
+
+
 class RunResponse(BaseModel):
     output: str
     error: Optional[str] = None
+    error_line: Optional[int] = None
+    error_markers: list[ErrorMarker] = []
     tokens: list[TokenInfo] = []
     ast: str = ""
     semantic: Optional[SemanticInfo] = None
@@ -78,7 +95,15 @@ class RunResponse(BaseModel):
     generated_python: str = ""
 
 
-# ── AST to string helper ──
+# -- Helpers --
+
+def extract_line_from_error(error_str: str) -> Optional[int]:
+    """Extract a line number from error messages like 'Parser Ghalati (line 5): ...'"""
+    match = re.search(r'\(line (\d+)\)', error_str)
+    if match:
+        return int(match.group(1))
+    return None
+
 
 def ast_to_string(nodes: list, indent: int = 0) -> str:
     """Convert AST nodes to a readable tree string for the frontend."""
@@ -131,6 +156,42 @@ def ast_to_string(nodes: list, indent: int = 0) -> str:
     return "\n".join(lines)
 
 
+def print_symbol_table(sem_result) -> None:
+    """Print a beautiful scoped symbol table to the terminal."""
+    if not sem_result.scoped_symbols:
+        return
+
+    print()
+    print(f"  {C.BG_CYAN}{C.BLACK}{C.BOLD}  SYMBOL TABLE  {C.RESET}")
+    print()
+
+    # Table header
+    print(f"    {C.DIM}+{'-'*20}+{'-'*12}+{'-'*22}+{'-'*8}+{C.RESET}")
+    print(f"    {C.DIM}|{C.RESET} {C.BOLD}{'Variable':<18}{C.RESET} {C.DIM}|{C.RESET} {C.BOLD}{'Type':<10}{C.RESET} {C.DIM}|{C.RESET} {C.BOLD}{'Scope':<20}{C.RESET} {C.DIM}|{C.RESET} {C.BOLD}{'Depth':<6}{C.RESET} {C.DIM}|{C.RESET}")
+    print(f"    {C.DIM}+{'-'*20}+{'-'*12}+{'-'*22}+{'-'*8}+{C.RESET}")
+
+    for entry in sem_result.scoped_symbols:
+        # Color based on scope depth
+        if entry.scope_depth == 0:
+            scope_color = C.BR_GREEN
+        elif entry.scope_depth == 1:
+            scope_color = C.BR_YELLOW
+        else:
+            scope_color = C.BR_MAGENTA
+
+        depth_indicator = "  " * entry.scope_depth + str(entry.scope_depth)
+
+        print(
+            f"    {C.DIM}|{C.RESET} {C.BR_BLUE}{entry.name:<18}{C.RESET} "
+            f"{C.DIM}|{C.RESET} {C.BR_CYAN}{entry.var_type:<10}{C.RESET} "
+            f"{C.DIM}|{C.RESET} {scope_color}{entry.scope:<20}{C.RESET} "
+            f"{C.DIM}|{C.RESET} {scope_color}{depth_indicator:<6}{C.RESET} {C.DIM}|{C.RESET}"
+        )
+
+    print(f"    {C.DIM}+{'-'*20}+{'-'*12}+{'-'*22}+{'-'*8}+{C.RESET}")
+    print()
+
+
 @app.post("/run", response_model=RunResponse)
 async def run_code(request: RunRequest) -> RunResponse:
     """Execute Urdu code through the full compiler pipeline."""
@@ -139,18 +200,18 @@ async def run_code(request: RunRequest) -> RunResponse:
     if not code.strip():
         return RunResponse(output="")
 
-    # ── Banner ──
+    # -- Banner --
     print()
-    print(f"  {C.BG_BLUE}{C.BR_WHITE}{C.BOLD}  ═══════════════════════════════════════════  {C.RESET}")
-    print(f"  {C.BG_BLUE}{C.BR_WHITE}{C.BOLD}    🚀 URDU-CUSTOM-COMPILER — New Request     {C.RESET}")
-    print(f"  {C.BG_BLUE}{C.BR_WHITE}{C.BOLD}  ═══════════════════════════════════════════  {C.RESET}")
+    print(f"  {C.BG_BLUE}{C.BR_WHITE}{C.BOLD}  =============================================  {C.RESET}")
+    print(f"  {C.BG_BLUE}{C.BR_WHITE}{C.BOLD}    URDU-CUSTOM-COMPILER -- New Request          {C.RESET}")
+    print(f"  {C.BG_BLUE}{C.BR_WHITE}{C.BOLD}  =============================================  {C.RESET}")
     print()
 
     # Show source code
-    print(f"  {C.DIM}┌─ Source Code ──────────────────────────────{C.RESET}")
+    print(f"  {C.DIM}+-- Source Code ------------------------------------------{C.RESET}")
     for i, line in enumerate(code.splitlines(), 1):
-        print(f"  {C.DIM}│{C.RESET} {C.DIM}{i:>3} │{C.RESET} {C.BR_WHITE}{line}{C.RESET}")
-    print(f"  {C.DIM}└────────────────────────────────────────────{C.RESET}")
+        print(f"  {C.DIM}|{C.RESET} {C.DIM}{i:>3} |{C.RESET} {C.BR_WHITE}{line}{C.RESET}")
+    print(f"  {C.DIM}+--------------------------------------------------------{C.RESET}")
     print()
 
     # Accumulate response data
@@ -159,9 +220,10 @@ async def run_code(request: RunRequest) -> RunResponse:
     semantic_info: Optional[SemanticInfo] = None
     tac_info: Optional[TACInfo] = None
     generated_python = ""
+    error_markers: list[ErrorMarker] = []
 
     try:
-        # ═══ Stage 1: Lexing ═══
+        # === Stage 1: Lexing ===
         start = time.perf_counter()
         tokens = Lexer(code).tokenize()
         lex_time = (time.perf_counter() - start) * 1000
@@ -177,10 +239,10 @@ async def run_code(request: RunRequest) -> RunResponse:
             idx += 1
 
         print_tokens(tokens)
-        print(f"  {C.DIM}  ⏱  Lexer time: {C.BR_CYAN}{lex_time:.2f}ms{C.RESET}")
+        print(f"  {C.DIM}  >> Lexer time: {C.BR_CYAN}{lex_time:.2f}ms{C.RESET}")
         print_separator()
 
-        # ═══ Stage 2: Parsing ═══
+        # === Stage 2: Parsing ===
         start = time.perf_counter()
         ast = Parser(tokens).parse()
         parse_time = (time.perf_counter() - start) * 1000
@@ -188,61 +250,79 @@ async def run_code(request: RunRequest) -> RunResponse:
         ast_str = ast_to_string(ast)
 
         print_ast(ast)
-        print(f"  {C.DIM}  ⏱  Parser time: {C.BR_MAGENTA}{parse_time:.2f}ms{C.RESET}")
+        print(f"  {C.DIM}  >> Parser time: {C.BR_MAGENTA}{parse_time:.2f}ms{C.RESET}")
         print_separator()
 
-        # ═══ Stage 3: Semantic Analysis ═══
+        # === Stage 3: Semantic Analysis ===
         start = time.perf_counter()
         sem_result = SemanticAnalyzer().analyze(ast)
         sem_time = (time.perf_counter() - start) * 1000
+
+        # Build scoped symbols for response
+        scoped_entries = [
+            SymbolEntryInfo(
+                name=e.name, var_type=e.var_type,
+                scope=e.scope, scope_depth=e.scope_depth,
+            )
+            for e in sem_result.scoped_symbols
+        ]
 
         semantic_info = SemanticInfo(
             errors=sem_result.errors,
             warnings=sem_result.warnings,
             symbol_table=sem_result.symbol_table,
+            scoped_symbols=scoped_entries,
         )
 
+        # Build error markers from semantic warnings/errors
+        for w in sem_result.warnings:
+            error_markers.append(ErrorMarker(line=1, message=w, severity="warning"))
+        for e in sem_result.errors:
+            error_markers.append(ErrorMarker(line=1, message=e, severity="error"))
+
         # Print semantic results to terminal
-        print(f"  {C.BG_CYAN}{C.BLACK}{C.BOLD}  🔍 SEMANTIC ANALYSIS  {C.RESET}")
+        print(f"  {C.BG_CYAN}{C.BLACK}{C.BOLD}  SEMANTIC ANALYSIS  {C.RESET}")
         print()
-        if sem_result.symbol_table:
-            print(f"  {C.DIM}  Symbol Table:{C.RESET}")
-            for var, typ in sem_result.symbol_table.items():
-                print(f"    {C.BR_BLUE}{var}{C.RESET} : {C.BR_GREEN}{typ}{C.RESET}")
+
+        # Print the scoped symbol table
+        print_symbol_table(sem_result)
+
         if sem_result.warnings:
             for w in sem_result.warnings:
-                print(f"  {C.BR_YELLOW}  ⚠ {w}{C.RESET}")
+                print(f"  {C.BR_YELLOW}  ! {w}{C.RESET}")
         if sem_result.errors:
             for e in sem_result.errors:
-                print(f"  {C.BR_RED}  ✗ {e}{C.RESET}")
-            print(f"  {C.DIM}  ⏱  Semantic time: {C.BR_CYAN}{sem_time:.2f}ms{C.RESET}")
+                print(f"  {C.BR_RED}  X {e}{C.RESET}")
+            print(f"  {C.DIM}  >> Semantic time: {C.BR_CYAN}{sem_time:.2f}ms{C.RESET}")
             print_separator()
             # Return early with semantic errors
             return RunResponse(
                 output="",
                 error="Semantic Ghalati: " + "; ".join(sem_result.errors),
+                error_line=1,
+                error_markers=error_markers,
                 tokens=token_list,
                 ast=ast_str,
                 semantic=semantic_info,
             )
         else:
-            print(f"  {C.BR_GREEN}  ✓ Semantic check passed{C.RESET}")
-        print(f"  {C.DIM}  ⏱  Semantic time: {C.BR_CYAN}{sem_time:.2f}ms{C.RESET}")
+            print(f"  {C.BR_GREEN}  [OK] Semantic check passed{C.RESET}")
+        print(f"  {C.DIM}  >> Semantic time: {C.BR_CYAN}{sem_time:.2f}ms{C.RESET}")
         print_separator()
 
-        # ═══ Stage 4: IR Generation (TAC) ═══
+        # === Stage 4: IR Generation (TAC) ===
         start = time.perf_counter()
         tac_original = IRGenerator().generate(ast)
         ir_time = (time.perf_counter() - start) * 1000
 
-        print(f"  {C.BG_MAGENTA}{C.BLACK}{C.BOLD}  ⚡ TAC — Three Address Code  {C.RESET}")
+        print(f"  {C.BG_MAGENTA}{C.BLACK}{C.BOLD}  TAC -- Three Address Code  {C.RESET}")
         print()
         for i, instr in enumerate(tac_original):
             print(f"    {C.DIM}{i:>3}{C.RESET}  {C.BR_WHITE}{instr}{C.RESET}")
-        print(f"  {C.DIM}  ⏱  IR generation time: {C.BR_MAGENTA}{ir_time:.2f}ms{C.RESET}")
+        print(f"  {C.DIM}  >> IR generation time: {C.BR_MAGENTA}{ir_time:.2f}ms{C.RESET}")
         print_separator()
 
-        # ═══ Stage 5: Optimization ═══
+        # === Stage 5: Optimization ===
         start = time.perf_counter()
         opt_result = Optimizer().optimize(tac_original)
         opt_time = (time.perf_counter() - start) * 1000
@@ -253,26 +333,26 @@ async def run_code(request: RunRequest) -> RunResponse:
             changes=opt_result.changes,
         )
 
-        print(f"  {C.BG_GREEN}{C.BLACK}{C.BOLD}  🔧 OPTIMIZATION  {C.RESET}")
+        print(f"  {C.BG_GREEN}{C.BLACK}{C.BOLD}  OPTIMIZATION  {C.RESET}")
         print()
         for change in opt_result.changes:
-            print(f"    {C.BR_YELLOW}→ {change}{C.RESET}")
-        print(f"  {C.DIM}  ⏱  Optimization time: {C.BR_GREEN}{opt_time:.2f}ms{C.RESET}")
+            print(f"    {C.BR_YELLOW}-> {change}{C.RESET}")
+        print(f"  {C.DIM}  >> Optimization time: {C.BR_GREEN}{opt_time:.2f}ms{C.RESET}")
         print_separator()
 
-        # ═══ Stage 6: Python Code Generation ═══
+        # === Stage 6: Python Code Generation ===
         start = time.perf_counter()
         generated_python = CodeGenerator().generate(ast)
         codegen_time = (time.perf_counter() - start) * 1000
 
-        print(f"  {C.BG_BLUE}{C.BR_WHITE}{C.BOLD}  🐍 GENERATED PYTHON  {C.RESET}")
+        print(f"  {C.BG_BLUE}{C.BR_WHITE}{C.BOLD}  GENERATED PYTHON  {C.RESET}")
         print()
         for line in generated_python.splitlines():
             print(f"    {C.BR_GREEN}{line}{C.RESET}")
-        print(f"  {C.DIM}  ⏱  Code generation time: {C.BR_BLUE}{codegen_time:.2f}ms{C.RESET}")
+        print(f"  {C.DIM}  >> Code generation time: {C.BR_BLUE}{codegen_time:.2f}ms{C.RESET}")
         print_separator()
 
-        # ═══ Stage 7: Interpretation ═══
+        # === Stage 7: Interpretation ===
         start = time.perf_counter()
         interpreter = Interpreter()
         output_lines = interpreter.execute(ast)
@@ -280,9 +360,9 @@ async def run_code(request: RunRequest) -> RunResponse:
 
         print_execution_result(output_lines, exec_time)
 
-        # ── Total time ──
+        # -- Total time --
         total = lex_time + parse_time + sem_time + ir_time + opt_time + codegen_time + exec_time
-        print(f"  {C.DIM}  📊 Total pipeline: {C.BR_GREEN}{C.BOLD}{total:.2f}ms{C.RESET}")
+        print(f"  {C.DIM}  Total pipeline: {C.BR_GREEN}{C.BOLD}{total:.2f}ms{C.RESET}")
         print()
 
         return RunResponse(
@@ -293,27 +373,44 @@ async def run_code(request: RunRequest) -> RunResponse:
             semantic=semantic_info,
             tac=tac_info,
             generated_python=generated_python,
+            error_markers=error_markers,
         )
 
     except LexError as e:
-        print_error(str(e), "LEXER")
-        return RunResponse(output="", error=str(e), tokens=token_list)
-    except ParseError as e:
-        print_error(str(e), "PARSER")
-        return RunResponse(output="", error=str(e), tokens=token_list, ast=ast_str)
-    except UrduRuntimeError as e:
-        print_error(str(e), "RUNTIME")
+        err_str = str(e)
+        err_line = extract_line_from_error(err_str)
+        print_error(err_str, "LEXER")
+        if err_line:
+            error_markers.append(ErrorMarker(line=err_line, message=err_str, severity="error"))
         return RunResponse(
-            output="", error=str(e),
+            output="", error=err_str, error_line=err_line,
+            error_markers=error_markers, tokens=token_list,
+        )
+    except ParseError as e:
+        err_str = str(e)
+        err_line = e.line
+        print_error(err_str, "PARSER")
+        error_markers.append(ErrorMarker(line=err_line, message=err_str, severity="error"))
+        return RunResponse(
+            output="", error=err_str, error_line=err_line,
+            error_markers=error_markers, tokens=token_list, ast=ast_str,
+        )
+    except UrduRuntimeError as e:
+        err_str = str(e)
+        print_error(err_str, "RUNTIME")
+        return RunResponse(
+            output="", error=err_str,
+            error_markers=error_markers,
             tokens=token_list, ast=ast_str,
             semantic=semantic_info, tac=tac_info,
             generated_python=generated_python,
         )
     except Exception as e:
-        print_error(str(e), "INTERNAL")
-        return RunResponse(output="", error=f"Internal Error: {str(e)}")
+        err_str = str(e)
+        print_error(err_str, "INTERNAL")
+        return RunResponse(output="", error=f"Internal Error: {err_str}")
 
 
 @app.get("/")
 async def root():
-    return {"message": "Urdu Custom Compiler API v2.0 — POST /run to execute code"}
+    return {"message": "Urdu Custom Compiler API v2.1 -- POST /run to execute code"}

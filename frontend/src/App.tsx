@@ -127,7 +127,11 @@ export default function App() {
             className="app__editor-wrapper"
             style={{ flexBasis: `${editorPct}%`, flexGrow: 0, flexShrink: 0 }}
           >
-            <Editor code={code} onChange={setCode} />
+            <Editor
+              code={code}
+              onChange={setCode}
+              errorMarkers={compilerData?.error_markers ?? []}
+            />
           </div>
           <div
             className="app__resize-handle"
