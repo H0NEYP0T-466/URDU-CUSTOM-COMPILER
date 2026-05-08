@@ -27,6 +27,12 @@
 
 </p>
 
+<p align="center">
+  <img src="frontend/visuals/WEB UI.PNG" alt="Urdu Custom Compiler — Web IDE Screenshot" width="900" />
+</p>
+
+<p align="center"><em>🖥 The Web IDE — Monaco Editor with real-time compiler pipeline visualization</em></p>
+
 **ایک کسٹم زبان** — A custom programming language compiler and interpreter with **Roman Urdu** syntax. Write code in Urdu using familiar keywords, and watch it compile through a full pipeline: Lexer → Parser → Semantic Analysis → IR Generation → Optimization → Code Generation → Interpretation.
 
 ---
