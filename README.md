@@ -55,6 +55,7 @@
 - [Quick Start](#-installation)
 - [Usage Examples](#-usage-examples)
 - [Architecture](#-architecture)
+- [Compiler Pipeline Visualizations](#-compiler-pipeline-visualizations)
 - [Folder Structure](#-folder-structure)
 - [Tech Stack](#-tech-stack)
 - [Dependencies & Packages](#-dependencies--packages)
@@ -282,6 +283,94 @@ The compiler follows a classic multi-stage pipeline:
 5. **Optimizer** (`compiler/optimizer.py`) — Constant folding on TAC instructions.
 6. **Code Generator** (`compiler/codegen.py`) — Translates AST to equivalent Python source code.
 7. **Interpreter** (`compiler/interpreter.py`) — Tree-walk interpreter that executes the AST directly.
+
+---
+
+## 📸 Compiler Pipeline Visualizations
+
+See the compiler in action — every stage of the pipeline visualized in the Web UI.
+
+### Stage 1: Lexer — Tokenization
+
+The Lexer converts raw Urdu source code into a stream of tokens, each tagged with type, value, line, and column.
+
+<p align="center">
+  <img src="frontend/visuals/tokens.PNG" alt="Lexer — Token stream output" width="700" />
+</p>
+
+<p align="center"><em>Token stream: each word, operator, and literal classified with position info</em></p>
+
+<p align="center">
+  <img src="frontend/visuals/server_imgof_LEXER.PNG" alt="Lexer — Web UI token panel" width="900" />
+</p>
+
+<p align="center"><em>Web IDE — Lexer panel showing the full token list</em></p>
+
+### Stage 2: Parser — Abstract Syntax Tree (AST)
+
+The Parser consumes the token stream and builds a tree representation of the program structure using recursive descent.
+
+<p align="center">
+  <img src="frontend/visuals/ast.PNG" alt="Parser — Abstract Syntax Tree" width="700" />
+</p>
+
+<p align="center"><em>AST: hierarchical tree showing the program's syntactic structure</em></p>
+
+<p align="center">
+  <img src="frontend/visuals/server_img_parser_symboltable.PNG" alt="Parser — AST and Symbol Table in Web UI" width="900" />
+</p>
+
+<p align="center"><em>Web IDE — Parser panel with AST tree and symbol table</em></p>
+
+### Stage 3: Semantic Analysis — Type Checking & Scoping
+
+The Semantic Analyzer validates the AST: type checking, scope resolution, undeclared variable detection, and scoped symbol table construction.
+
+<p align="center">
+  <img src="frontend/visuals/semantic.PNG" alt="Semantic Analyzer — Symbol table, errors, and warnings" width="700" />
+</p>
+
+<p align="center"><em>Semantic output: symbol table with types, scopes, errors, and warnings</em></p>
+
+### Stage 4: TAC — Three Address Code Generation
+
+The IR Generator converts the AST into Three Address Code (TAC), a low-level intermediate representation.
+
+<p align="center">
+  <img src="frontend/visuals/tac.PNG" alt="TAC — Three Address Code (original and optimized)" width="700" />
+</p>
+
+<p align="center"><em>TAC instructions: original (unoptimized) vs. optimized after constant folding</em></p>
+
+### Stage 5: Optimization — Constant Folding
+
+The Optimizer runs constant folding on the TAC instructions, reducing expressions like `3 + 4` to `7` at compile time.
+
+<p align="center">
+  <img src="frontend/visuals/server_imgof_tac_optimization_pythoncde_output.PNG" alt="TAC, Optimization, and Python Code — Full pipeline view" width="900" />
+</p>
+
+<p align="center"><em>Web IDE — TAC, optimization diff, and generated Python all visible</em></p>
+
+### Stage 6: Code Generation — Python Output
+
+The Code Generator translates the AST into equivalent Python source code.
+
+<p align="center">
+  <img src="frontend/visuals/python_code.PNG" alt="Code Generator — Generated Python code" width="700" />
+</p>
+
+<p align="center"><em>Generated Python: the Urdu program translated to executable Python</em></p>
+
+### Stage 7: Execution — Interpreter Output
+
+The tree-walk interpreter executes the AST directly and produces the final program output.
+
+<p align="center">
+  <img src="frontend/visuals/execution_with_output.PNG" alt="Interpreter — Program execution with output" width="900" />
+</p>
+
+<p align="center"><em>Web IDE — Final output panel showing the result of program execution</em></p>
 
 ---
 
