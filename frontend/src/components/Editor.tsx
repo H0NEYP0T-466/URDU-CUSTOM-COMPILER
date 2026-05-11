@@ -15,6 +15,8 @@ const URDU_KEYWORDS = [
   "rakho", "dikhao", "agar", "warna",
   "jabtak", "khatam", "sahi", "ghalat",
   "aur", "ya",
+  "banao", "wapis", "karo",
+  "input", "int", "str",
 ];
 
 export default function Editor({ code, onChange, errorMarkers = [] }: EditorProps) {
@@ -41,7 +43,7 @@ export default function Editor({ code, onChange, errorMarkers = [] }: EditorProp
           [/\b\d+(\.\d+)?\b/, "number"],
           // Keywords
           [
-            /\b(rakho|dikhao|agar|warna|jabtak|khatam|sahi|ghalat|aur|ya)\b/,
+            /\b(rakho|dikhao|agar|warna|jabtak|khatam|sahi|ghalat|aur|ya|banao|wapis|karo|input|int|str)\b/,
             "keyword",
           ],
           // Operators

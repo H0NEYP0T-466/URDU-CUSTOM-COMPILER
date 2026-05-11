@@ -120,6 +120,61 @@ rakho x = "hello"
 rakho y = x + 5
 dikhao z`,
   },
+  {
+    title: "Functions",
+    icon: "🔧",
+    description: "banao se function define karo, karo se call karo",
+    code: `# Function banao aur use karo
+banao add(a, b)
+    wapis a + b
+khatam
+
+banao greet(naam)
+    dikhao "Assalam o Alaikum, "
+    dikhao naam
+khatam
+
+karo greet("Duniya")
+rakho result = add(10, 20)
+dikhao "Jama: "
+dikhao result`,
+  },
+  {
+    title: "Arrays",
+    icon: "📋",
+    description: "Lists banao, access karo, aur modify karo",
+    code: `# Array/List banana aur use karna
+rakho fruits = ["Aam", "Seb", "Kela"]
+dikhao fruits[0]
+dikhao fruits[1]
+dikhao fruits[2]
+
+# Array value change karo
+rakho fruits[1] = "Anaar"
+dikhao "Update ke baad:"
+dikhao fruits[1]
+
+# Numbers ki list
+rakho nums = [10, 20, 30, 40, 50]
+rakho total = nums[0] + nums[1] + nums[2]
+dikhao "Pehle 3 ka total: "
+dikhao total`,
+  },
+  {
+    title: "User Input",
+    icon: "⌨️",
+    description: "User se input lo aur use karo (neeche input do)",
+    code: `# User se naam lo
+rakho naam = input("Apna naam likho: ")
+dikhao "Assalam o Alaikum, "
+dikhao naam
+
+# Number input lo aur double karo
+rakho x = int(input("Ek number likho: "))
+rakho double = x * 2
+dikhao "Double: "
+dikhao double`,
+  },
 ];
 
 interface ExamplesPanelProps {

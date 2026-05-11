@@ -9,6 +9,9 @@ from .lexer import Token, TokenType
 from .parser import (
     ASTNode, NumberNode, StringNode, BoolNode, VarNode,
     BinOpNode, UnaryOpNode, AssignNode, PrintNode, IfNode, WhileNode,
+    FuncDefNode, ReturnNode, FuncCallNode,
+    ArrayLiteralNode, ArrayAccessNode, ArrayAssignNode,
+    InputNode, TypeCastNode,
 )
 
 
@@ -140,6 +143,9 @@ def _token_color(token_type: TokenType) -> str:
         TokenType.ASSIGN:     C.BR_RED,
         TokenType.LPAREN:     C.DIM,
         TokenType.RPAREN:     C.DIM,
+        TokenType.COMMA:      C.DIM,
+        TokenType.LBRACKET:   C.BR_YELLOW,
+        TokenType.RBRACKET:   C.BR_YELLOW,
         TokenType.NEWLINE:    C.DIM,
         TokenType.EOF:        C.DIM,
     }.get(token_type, C.WHITE)
@@ -233,6 +239,51 @@ def _print_node(node: ASTNode, prefix: str = "", is_last: bool = True) -> None:
     elif isinstance(node, VarNode):
         print(f"{prefix}{C.DIM}{connector}{C.RESET}{C.BR_BLUE}VAR{C.RESET} {C.BR_WHITE}{node.name}{C.RESET}")
 
+    elif isinstance(node, FuncDefNode):
+        params_str = ", ".join(node.params) if node.params else "(no params)"
+        print(f"{prefix}{C.DIM}{connector}{C.RESET}{C.BR_CYAN}{C.BOLD}FUNC_DEF{C.RESET} {C.BR_BLUE}{node.name}{C.RESET} {C.DIM}({params_str}){C.RESET}")
+        print(f"{child_prefix}{C.DIM}└── {C.RESET}{C.ITALIC}{C.DIM}body ({len(node.body)} stmts):{C.RESET}")
+        for j, stmt in enumerate(node.body):
+            _print_node(stmt, child_prefix + "    ", is_last=(j == len(node.body) - 1))
+
+    elif isinstance(node, ReturnNode):
+        print(f"{prefix}{C.DIM}{connector}{C.RESET}{C.BR_RED}{C.BOLD}RETURN{C.RESET}")
+        if node.value:
+            _print_node(node.value, child_prefix, is_last=True)
+
+    elif isinstance(node, FuncCallNode):
+        args_str = f"{len(node.args)} args" if node.args else "no args"
+        print(f"{prefix}{C.DIM}{connector}{C.RESET}{C.BR_GREEN}{C.BOLD}CALL{C.RESET} {C.BR_BLUE}{node.name}{C.RESET} {C.DIM}({args_str}){C.RESET}")
+        for j, arg in enumerate(node.args):
+            _print_node(arg, child_prefix, is_last=(j == len(node.args) - 1))
+
+    elif isinstance(node, ArrayLiteralNode):
+        print(f"{prefix}{C.DIM}{connector}{C.RESET}{C.BR_YELLOW}{C.BOLD}ARRAY{C.RESET} {C.DIM}[{len(node.elements)} elements]{C.RESET}")
+        for j, elem in enumerate(node.elements):
+            _print_node(elem, child_prefix, is_last=(j == len(node.elements) - 1))
+
+    elif isinstance(node, ArrayAccessNode):
+        print(f"{prefix}{C.DIM}{connector}{C.RESET}{C.BR_YELLOW}INDEX_ACCESS{C.RESET}")
+        _print_node(node.array, child_prefix, is_last=False)
+        print(f"{child_prefix}{C.DIM}└── {C.RESET}{C.ITALIC}{C.DIM}index:{C.RESET}")
+        _print_node(node.index, child_prefix + "    ", is_last=True)
+
+    elif isinstance(node, ArrayAssignNode):
+        print(f"{prefix}{C.DIM}{connector}{C.RESET}{C.BR_RED}{C.BOLD}ARRAY_ASSIGN{C.RESET} {C.BR_BLUE}{node.name}{C.RESET}")
+        print(f"{child_prefix}{C.DIM}├── {C.RESET}{C.ITALIC}{C.DIM}index:{C.RESET}")
+        _print_node(node.index, child_prefix + "│   ", is_last=True)
+        print(f"{child_prefix}{C.DIM}└── {C.RESET}{C.ITALIC}{C.DIM}value:{C.RESET}")
+        _print_node(node.value, child_prefix + "    ", is_last=True)
+
+    elif isinstance(node, InputNode):
+        print(f"{prefix}{C.DIM}{connector}{C.RESET}{C.BR_GREEN}INPUT{C.RESET}")
+        if node.prompt:
+            _print_node(node.prompt, child_prefix, is_last=True)
+
+    elif isinstance(node, TypeCastNode):
+        print(f"{prefix}{C.DIM}{connector}{C.RESET}{C.BR_MAGENTA}CAST{C.RESET} {C.BR_WHITE}{node.target_type}(){C.RESET}")
+        _print_node(node.expr, child_prefix, is_last=True)
+
     else:
         print(f"{prefix}{C.DIM}{connector}{C.RESET}{C.RED}UNKNOWN{C.RESET} {type(node).__name__}")
 
@@ -257,6 +308,24 @@ def _count_nodes(nodes: List[ASTNode]) -> int:
             count += _count_nodes([node.left, node.right])
         elif isinstance(node, UnaryOpNode):
             count += _count_nodes([node.operand])
+        elif isinstance(node, FuncDefNode):
+            count += _count_nodes(node.body)
+        elif isinstance(node, ReturnNode):
+            if node.value:
+                count += _count_nodes([node.value])
+        elif isinstance(node, FuncCallNode):
+            count += _count_nodes(node.args)
+        elif isinstance(node, ArrayLiteralNode):
+            count += _count_nodes(node.elements)
+        elif isinstance(node, ArrayAccessNode):
+            count += _count_nodes([node.array, node.index])
+        elif isinstance(node, ArrayAssignNode):
+            count += _count_nodes([node.index, node.value])
+        elif isinstance(node, InputNode):
+            if node.prompt:
+                count += _count_nodes([node.prompt])
+        elif isinstance(node, TypeCastNode):
+            count += _count_nodes([node.expr])
     return count
 
 

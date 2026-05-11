@@ -18,6 +18,9 @@ from typing import List
 from .parser import (
     ASTNode, NumberNode, StringNode, BoolNode, VarNode,
     BinOpNode, UnaryOpNode, AssignNode, PrintNode, IfNode, WhileNode,
+    FuncDefNode, ReturnNode, FuncCallNode,
+    ArrayLiteralNode, ArrayAccessNode, ArrayAssignNode,
+    InputNode, TypeCastNode,
 )
 
 
@@ -82,6 +85,25 @@ class IRGenerator:
         elif isinstance(node, WhileNode):
             self._gen_while(node)
 
+        elif isinstance(node, FuncDefNode):
+            self._gen_funcdef(node)
+
+        elif isinstance(node, ReturnNode):
+            if node.value:
+                val = self._gen_expr(node.value)
+                self._emit(f"return {val}")
+            else:
+                self._emit("return")
+
+        elif isinstance(node, FuncCallNode):
+            args = [self._gen_expr(a) for a in node.args]
+            self._emit(f"call {node.name}({', '.join(args)})")
+
+        elif isinstance(node, ArrayAssignNode):
+            idx = self._gen_expr(node.index)
+            val = self._gen_expr(node.value)
+            self._emit(f"{node.name}[{idx}] = {val}")
+
     def _gen_if(self, node: IfNode) -> None:
         """Generate TAC for if/else with labels and jumps."""
         cond = self._gen_expr(node.condition)
@@ -132,6 +154,17 @@ class IRGenerator:
         self._emit(f"{end_label}:")
         self._emit("nop")
 
+    def _gen_funcdef(self, node: FuncDefNode) -> None:
+        """Generate TAC for function definition."""
+        end_label = self._new_label()
+        self._emit(f"goto {end_label}")  # skip function body in normal flow
+        self._emit(f"func_{node.name}:")
+        for stmt in node.body:
+            self._gen_stmt(stmt)
+        self._emit("return")
+        self._emit(f"{end_label}:")
+        self._emit("nop")
+
     # ── Expression generation (returns the name holding the result) ──
 
     def _gen_expr(self, node: ASTNode) -> str:
@@ -159,6 +192,40 @@ class IRGenerator:
             right = self._gen_expr(node.right)
             temp = self._new_temp()
             self._emit(f"{temp} = {left} {node.op} {right}")
+            return temp
+
+        if isinstance(node, FuncCallNode):
+            args = [self._gen_expr(a) for a in node.args]
+            temp = self._new_temp()
+            self._emit(f"{temp} = call {node.name}({', '.join(args)})")
+            return temp
+
+        if isinstance(node, ArrayLiteralNode):
+            elems = [self._gen_expr(e) for e in node.elements]
+            temp = self._new_temp()
+            self._emit(f"{temp} = [{', '.join(elems)}]")
+            return temp
+
+        if isinstance(node, ArrayAccessNode):
+            arr = self._gen_expr(node.array)
+            idx = self._gen_expr(node.index)
+            temp = self._new_temp()
+            self._emit(f"{temp} = {arr}[{idx}]")
+            return temp
+
+        if isinstance(node, InputNode):
+            temp = self._new_temp()
+            if node.prompt:
+                prompt = self._gen_expr(node.prompt)
+                self._emit(f"{temp} = input({prompt})")
+            else:
+                self._emit(f"{temp} = input()")
+            return temp
+
+        if isinstance(node, TypeCastNode):
+            val = self._gen_expr(node.expr)
+            temp = self._new_temp()
+            self._emit(f"{temp} = {node.target_type}({val})")
             return temp
 
         # Fallback

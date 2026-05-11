@@ -17,7 +17,7 @@ from typing import List
 
 class TokenType(Enum):
     """All token categories recognised by the Urdu language."""
-    KEYWORD     = auto()   # rakho, dikhao, agar, warna, jabtak, khatam, sahi, ghalat, aur, ya
+    KEYWORD     = auto()   # rakho, dikhao, agar, warna, jabtak, khatam, sahi, ghalat, aur, ya, banao, wapis, karo, input, int, str
     IDENTIFIER  = auto()   # variable names
     NUMBER      = auto()   # integer literals
     FLOAT       = auto()   # floating-point literals
@@ -26,6 +26,9 @@ class TokenType(Enum):
     ASSIGN      = auto()   # =
     LPAREN      = auto()   # (
     RPAREN      = auto()   # )
+    COMMA       = auto()   # ,
+    LBRACKET    = auto()   # [
+    RBRACKET    = auto()   # ]
     NEWLINE     = auto()   # logical line separator
     EOF         = auto()   # end of file
 
@@ -64,6 +67,8 @@ KEYWORDS = {
     "rakho", "dikhao", "agar", "warna",
     "jabtak", "khatam", "sahi", "ghalat",
     "aur", "ya",
+    "banao", "wapis", "karo",
+    "input", "int", "str",
 }
 
 # Multi-character operators (checked first so '>' is not consumed before '>=')
@@ -237,6 +242,22 @@ class Lexer:
                 continue
             if ch == ")":
                 self.tokens.append(Token(TokenType.RPAREN, ")", self.line))
+                self._advance()
+                continue
+
+            # ── comma ──
+            if ch == ",":
+                self.tokens.append(Token(TokenType.COMMA, ",", self.line))
+                self._advance()
+                continue
+
+            # ── brackets ──
+            if ch == "[":
+                self.tokens.append(Token(TokenType.LBRACKET, "[", self.line))
+                self._advance()
+                continue
+            if ch == "]":
+                self.tokens.append(Token(TokenType.RBRACKET, "]", self.line))
                 self._advance()
                 continue
 

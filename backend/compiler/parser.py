@@ -59,10 +59,52 @@ class WhileNode:
     condition: "ASTNode"
     body: List["ASTNode"]
 
+@dataclass
+class FuncDefNode:
+    name: str
+    params: List[str]
+    body: List["ASTNode"]
+
+@dataclass
+class ReturnNode:
+    value: Optional["ASTNode"] = None
+
+@dataclass
+class FuncCallNode:
+    name: str
+    args: List["ASTNode"]
+
+@dataclass
+class ArrayLiteralNode:
+    elements: List["ASTNode"]
+
+@dataclass
+class ArrayAccessNode:
+    array: "ASTNode"
+    index: "ASTNode"
+
+@dataclass
+class ArrayAssignNode:
+    name: str
+    index: "ASTNode"
+    value: "ASTNode"
+
+@dataclass
+class InputNode:
+    prompt: Optional["ASTNode"] = None
+
+@dataclass
+class TypeCastNode:
+    target_type: str
+    expr: "ASTNode"
+
 ASTNode = Union[
     NumberNode, StringNode, BoolNode, VarNode,
     BinOpNode, UnaryOpNode,
     AssignNode, PrintNode, IfNode, WhileNode,
+    FuncDefNode, ReturnNode, FuncCallNode,
+    ArrayLiteralNode, ArrayAccessNode, ArrayAssignNode,
+    InputNode, TypeCastNode,
 ]
 
 
@@ -78,6 +120,12 @@ ALL_KEYWORDS = {
     "ghalat": "boolean false value",
     "aur": "logical AND operator",
     "ya": "logical OR operator",
+    "banao": "function define karo (define function)",
+    "wapis": "value wapis karo (return)",
+    "karo": "function ko call karo (call function)",
+    "input": "user se input lo (read input)",
+    "int": "number mein badlo (convert to int)",
+    "str": "string mein badlo (convert to string)",
 }
 
 
@@ -162,7 +210,7 @@ def _build_helpful_error(tok: Token) -> str:
 
     return (
         f"'{word}' yahan expected nahi tha. "
-        f"Valid statements hain: rakho (assign), dikhao (print), agar (if), jabtak (while)"
+        f"Valid statements hain: rakho (assign), dikhao (print), agar (if), jabtak (while), banao (function), karo (call), wapis (return)"
     )
 
 
@@ -261,6 +309,12 @@ class Parser:
                 return self._parse_if()
             elif tok.value == "jabtak":
                 return self._parse_while()
+            elif tok.value == "banao":
+                return self._parse_funcdef()
+            elif tok.value == "wapis":
+                return self._parse_return()
+            elif tok.value == "karo":
+                return self._parse_func_call_stmt()
             else:
                 # Unknown keyword - give helpful suggestion
                 suggestion = _suggest_keyword(tok.value)
@@ -273,16 +327,26 @@ class Parser:
                     )
                 raise ParseError(
                     f"'{tok.value}' yahan use nahi ho sakta. "
-                    f"Statement 'rakho', 'dikhao', 'agar', ya 'jabtak' se shuru honi chahiye.",
+                    f"Statement 'rakho', 'dikhao', 'agar', 'jabtak', 'banao', 'karo', ya 'wapis' se shuru honi chahiye.",
                     tok.line
                 )
 
         # Not a keyword - build helpful error
         raise ParseError(_build_helpful_error(tok), tok.line)
 
-    def _parse_assign(self) -> AssignNode:
-        self._advance()
+    def _parse_assign(self) -> ASTNode:
+        self._advance()  # consume 'rakho'
         name_tok = self._expect(TokenType.IDENTIFIER)
+
+        # Check for array index assignment: rakho list[0] = 99
+        if self._current().type == TokenType.LBRACKET:
+            self._advance()  # consume '['
+            index_expr = self._parse_expression()
+            self._expect(TokenType.RBRACKET, "]")
+            self._expect(TokenType.ASSIGN, "=")
+            value_expr = self._parse_expression()
+            return ArrayAssignNode(name=name_tok.value, index=index_expr, value=value_expr)
+
         self._expect(TokenType.ASSIGN, "=")
         expr = self._parse_expression()
         return AssignNode(name=name_tok.value, value_expr=expr)
@@ -312,6 +376,59 @@ class Parser:
         body = self._parse_block()
         self._expect(TokenType.KEYWORD, "khatam")
         return WhileNode(condition=condition, body=body)
+
+    def _parse_funcdef(self) -> FuncDefNode:
+        """Parse: banao func_name(param1, param2) ... khatam"""
+        self._advance()  # consume 'banao'
+        name_tok = self._expect(TokenType.IDENTIFIER)
+        self._expect(TokenType.LPAREN, "(")
+
+        # Parse parameter list
+        params: List[str] = []
+        if self._current().type != TokenType.RPAREN:
+            param = self._expect(TokenType.IDENTIFIER)
+            params.append(param.value)
+            while self._current().type == TokenType.COMMA:
+                self._advance()  # consume ','
+                param = self._expect(TokenType.IDENTIFIER)
+                params.append(param.value)
+
+        self._expect(TokenType.RPAREN, ")")
+        self._skip_newlines()
+        body = self._parse_block()
+        self._expect(TokenType.KEYWORD, "khatam")
+        return FuncDefNode(name=name_tok.value, params=params, body=body)
+
+    def _parse_return(self) -> ReturnNode:
+        """Parse: wapis [expression]"""
+        self._advance()  # consume 'wapis'
+        # Check if there's a value to return (not newline/EOF/khatam)
+        tok = self._current()
+        if tok.type in (TokenType.NEWLINE, TokenType.EOF) or \
+           (tok.type == TokenType.KEYWORD and tok.value == "khatam"):
+            return ReturnNode(value=None)
+        value = self._parse_expression()
+        return ReturnNode(value=value)
+
+    def _parse_func_call_stmt(self) -> FuncCallNode:
+        """Parse: karo func_name(arg1, arg2)"""
+        self._advance()  # consume 'karo'
+        name_tok = self._expect(TokenType.IDENTIFIER)
+        self._expect(TokenType.LPAREN, "(")
+        args = self._parse_arg_list()
+        self._expect(TokenType.RPAREN, ")")
+        return FuncCallNode(name=name_tok.value, args=args)
+
+    def _parse_arg_list(self) -> List[ASTNode]:
+        """Parse comma-separated argument list (used in function calls)."""
+        args: List[ASTNode] = []
+        if self._current().type == TokenType.RPAREN:
+            return args
+        args.append(self._parse_expression())
+        while self._current().type == TokenType.COMMA:
+            self._advance()  # consume ','
+            args.append(self._parse_expression())
+        return args
 
     # -- Expression parsing with operator precedence --
 
@@ -383,9 +500,55 @@ class Parser:
         if tok.type == TokenType.KEYWORD and tok.value == "ghalat":
             self._advance()
             return BoolNode(False)
+
+        # input() — user input
+        if tok.type == TokenType.KEYWORD and tok.value == "input":
+            self._advance()  # consume 'input'
+            self._expect(TokenType.LPAREN, "(")
+            prompt = None
+            if self._current().type != TokenType.RPAREN:
+                prompt = self._parse_expression()
+            self._expect(TokenType.RPAREN, ")")
+            return InputNode(prompt=prompt)
+
+        # int() / str() — type casting
+        if tok.type == TokenType.KEYWORD and tok.value in ("int", "str"):
+            target = tok.value
+            self._advance()  # consume 'int' or 'str'
+            self._expect(TokenType.LPAREN, "(")
+            expr = self._parse_expression()
+            self._expect(TokenType.RPAREN, ")")
+            return TypeCastNode(target_type=target, expr=expr)
+
+        # Identifier — could be variable, function call, or array access
         if tok.type == TokenType.IDENTIFIER:
             self._advance()
+            # Function call in expression: name(args)
+            if self._current().type == TokenType.LPAREN:
+                self._advance()  # consume '('
+                args = self._parse_arg_list()
+                self._expect(TokenType.RPAREN, ")")
+                return FuncCallNode(name=tok.value, args=args)
+            # Array access: name[index]
+            if self._current().type == TokenType.LBRACKET:
+                self._advance()  # consume '['
+                index_expr = self._parse_expression()
+                self._expect(TokenType.RBRACKET, "]")
+                return ArrayAccessNode(array=VarNode(tok.value), index=index_expr)
             return VarNode(tok.value)
+
+        # Array literal: [elem1, elem2, ...]
+        if tok.type == TokenType.LBRACKET:
+            self._advance()  # consume '['
+            elements: List[ASTNode] = []
+            if self._current().type != TokenType.RBRACKET:
+                elements.append(self._parse_expression())
+                while self._current().type == TokenType.COMMA:
+                    self._advance()  # consume ','
+                    elements.append(self._parse_expression())
+            self._expect(TokenType.RBRACKET, "]")
+            return ArrayLiteralNode(elements=elements)
+
         if tok.type == TokenType.LPAREN:
             self._advance()
             expr = self._parse_expression()
@@ -402,6 +565,6 @@ class Parser:
 
         raise ParseError(
             f"Expression mein '{tok.value}' expected nahi tha. "
-            f"Yahan number, string, variable, ya (expression) hona chahiye.",
+            f"Yahan number, string, variable, function call, ya [array] hona chahiye.",
             tok.line
         )

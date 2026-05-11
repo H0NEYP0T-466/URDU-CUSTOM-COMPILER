@@ -16,6 +16,9 @@ from typing import Dict, List, Optional
 from .parser import (
     ASTNode, NumberNode, StringNode, BoolNode, VarNode,
     BinOpNode, UnaryOpNode, AssignNode, PrintNode, IfNode, WhileNode,
+    FuncDefNode, ReturnNode, FuncCallNode,
+    ArrayLiteralNode, ArrayAccessNode, ArrayAssignNode,
+    InputNode, TypeCastNode,
 )
 
 
@@ -25,6 +28,7 @@ TYPE_FLOAT = "float"
 TYPE_STRING = "string"
 TYPE_BOOL = "bool"
 TYPE_NUMBER = "number"   # used when int/float are interchangeable
+TYPE_ARRAY = "array"
 TYPE_UNKNOWN = "unknown"
 
 # Operators that require numeric operands
@@ -101,6 +105,7 @@ class SemanticAnalyzer:
         self.warnings: List[str] = []
         self.all_symbols: List[SymbolEntry] = []
         self._scope_counter = 0
+        self.functions: Dict[str, int] = {}  # name -> param_count
 
         # Initialize global scope
         self.global_scope = Scope("global", 0)
@@ -112,6 +117,7 @@ class SemanticAnalyzer:
         self.warnings = []
         self.all_symbols = []
         self._scope_counter = 0
+        self.functions = {}
         self.global_scope = Scope("global", 0)
         self.current_scope = self.global_scope
 
@@ -176,6 +182,15 @@ class SemanticAnalyzer:
             for stmt in node.body:
                 self._check_node(stmt)
             self._pop_scope()
+        elif isinstance(node, FuncDefNode):
+            self._check_funcdef(node)
+        elif isinstance(node, ReturnNode):
+            if node.value:
+                self._check_expr(node.value)
+        elif isinstance(node, FuncCallNode):
+            self._check_func_call(node)
+        elif isinstance(node, ArrayAssignNode):
+            self._check_array_assign(node)
 
     def _check_assign(self, node: AssignNode) -> None:
         """Check assignment: warn on re-declaration in same scope, infer type."""
@@ -199,6 +214,54 @@ class SemanticAnalyzer:
             scope=self.current_scope.name,
             scope_depth=self.current_scope.depth,
         ))
+
+    def _check_funcdef(self, node: FuncDefNode) -> None:
+        """Check function definition: register function, check body in new scope."""
+        if node.name in self.functions:
+            self.warnings.append(
+                f"Function '{node.name}' pehle se defined hai -- dubara define ho raha hai"
+            )
+        self.functions[node.name] = len(node.params)
+
+        # Function body gets its own scope with params defined
+        self._push_scope(f"banao:{node.name}")
+        for param in node.params:
+            self.current_scope.define(param, TYPE_UNKNOWN)
+            self.all_symbols.append(SymbolEntry(
+                name=param,
+                var_type=TYPE_UNKNOWN,
+                scope=self.current_scope.name,
+                scope_depth=self.current_scope.depth,
+            ))
+        for stmt in node.body:
+            self._check_node(stmt)
+        self._pop_scope()
+
+    def _check_func_call(self, node: FuncCallNode) -> None:
+        """Check function call: validate function exists and arg count."""
+        if node.name not in self.functions:
+            self.errors.append(
+                f"Function '{node.name}' defined nahi hai -- pehle 'banao' se define karo"
+            )
+        else:
+            expected = self.functions[node.name]
+            actual = len(node.args)
+            if expected != actual:
+                self.errors.append(
+                    f"Function '{node.name}' ko {expected} arguments chahiye, lekin {actual} diye gaye"
+                )
+        for arg in node.args:
+            self._check_expr(arg)
+
+    def _check_array_assign(self, node: ArrayAssignNode) -> None:
+        """Check array index assignment."""
+        result = self.current_scope.lookup(node.name)
+        if result is None:
+            self.errors.append(
+                f"Array '{node.name}' defined nahi hai -- pehle 'rakho' se assign karo"
+            )
+        self._check_expr(node.index)
+        self._check_expr(node.value)
 
     # -- Expression checking (returns inferred type) --
 
@@ -228,6 +291,33 @@ class SemanticAnalyzer:
 
         if isinstance(node, BinOpNode):
             return self._check_binop(node)
+
+        if isinstance(node, FuncCallNode):
+            self._check_func_call(node)
+            return TYPE_UNKNOWN  # can't infer return type statically
+
+        if isinstance(node, ArrayLiteralNode):
+            for elem in node.elements:
+                self._check_expr(elem)
+            return TYPE_ARRAY
+
+        if isinstance(node, ArrayAccessNode):
+            self._check_expr(node.array)
+            self._check_expr(node.index)
+            return TYPE_UNKNOWN
+
+        if isinstance(node, InputNode):
+            if node.prompt:
+                self._check_expr(node.prompt)
+            return TYPE_STRING
+
+        if isinstance(node, TypeCastNode):
+            self._check_expr(node.expr)
+            if node.target_type == "int":
+                return TYPE_INT
+            if node.target_type == "str":
+                return TYPE_STRING
+            return TYPE_UNKNOWN
 
         return TYPE_UNKNOWN
 

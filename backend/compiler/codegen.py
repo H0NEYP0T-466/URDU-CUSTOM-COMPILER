@@ -10,6 +10,9 @@ from typing import List
 from .parser import (
     ASTNode, NumberNode, StringNode, BoolNode, VarNode,
     BinOpNode, UnaryOpNode, AssignNode, PrintNode, IfNode, WhileNode,
+    FuncDefNode, ReturnNode, FuncCallNode,
+    ArrayLiteralNode, ArrayAccessNode, ArrayAssignNode,
+    InputNode, TypeCastNode,
 )
 
 
@@ -104,6 +107,34 @@ class CodeGenerator:
                 self._emit_line("pass")
             self._dedent()
 
+        elif isinstance(node, FuncDefNode):
+            params = ", ".join(node.params)
+            self._emit_line(f"def {node.name}({params}):")
+            self._indent()
+            if node.body:
+                for stmt in node.body:
+                    self._gen_stmt(stmt)
+            else:
+                self._emit_line("pass")
+            self._dedent()
+            self._lines.append("")  # blank line after function
+
+        elif isinstance(node, ReturnNode):
+            if node.value:
+                val_str = self._gen_expr(node.value)
+                self._emit_line(f"return {val_str}")
+            else:
+                self._emit_line("return")
+
+        elif isinstance(node, FuncCallNode):
+            args_str = ", ".join(self._gen_expr(a) for a in node.args)
+            self._emit_line(f"{node.name}({args_str})")
+
+        elif isinstance(node, ArrayAssignNode):
+            idx_str = self._gen_expr(node.index)
+            val_str = self._gen_expr(node.value)
+            self._emit_line(f"{node.name}[{idx_str}] = {val_str}")
+
     # ── Expression generation ──
 
     def _gen_expr(self, node: ASTNode) -> str:
@@ -131,5 +162,28 @@ class CodeGenerator:
             right = self._gen_expr(node.right)
             op = OP_MAP.get(node.op, node.op)
             return f"({left} {op} {right})"
+
+        if isinstance(node, FuncCallNode):
+            args_str = ", ".join(self._gen_expr(a) for a in node.args)
+            return f"{node.name}({args_str})"
+
+        if isinstance(node, ArrayLiteralNode):
+            elems = ", ".join(self._gen_expr(e) for e in node.elements)
+            return f"[{elems}]"
+
+        if isinstance(node, ArrayAccessNode):
+            arr = self._gen_expr(node.array)
+            idx = self._gen_expr(node.index)
+            return f"{arr}[{idx}]"
+
+        if isinstance(node, InputNode):
+            if node.prompt:
+                prompt_str = self._gen_expr(node.prompt)
+                return f"input({prompt_str})"
+            return "input()"
+
+        if isinstance(node, TypeCastNode):
+            expr_str = self._gen_expr(node.expr)
+            return f"{node.target_type}({expr_str})"
 
         return "None"

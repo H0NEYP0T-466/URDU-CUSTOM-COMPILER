@@ -48,6 +48,7 @@ app.add_middleware(
 
 class RunRequest(BaseModel):
     code: str
+    inputs: list[str] = []
 
 
 class TokenInfo(BaseModel):
@@ -110,6 +111,9 @@ def ast_to_string(nodes: list, indent: int = 0) -> str:
     from compiler.parser import (
         AssignNode, PrintNode, IfNode, WhileNode,
         BinOpNode, UnaryOpNode, NumberNode, StringNode, BoolNode, VarNode,
+        FuncDefNode, ReturnNode, FuncCallNode,
+        ArrayLiteralNode, ArrayAccessNode, ArrayAssignNode,
+        InputNode, TypeCastNode,
     )
 
     lines: list[str] = []
@@ -152,6 +156,39 @@ def ast_to_string(nodes: list, indent: int = 0) -> str:
             lines.append(f"{prefix}BOOL {'sahi' if node.value else 'ghalat'}")
         elif isinstance(node, VarNode):
             lines.append(f"{prefix}VAR {node.name}")
+        elif isinstance(node, FuncDefNode):
+            params = ", ".join(node.params)
+            lines.append(f"{prefix}FUNC_DEF {node.name}({params})")
+            lines.append(ast_to_string(node.body, indent + 1))
+        elif isinstance(node, ReturnNode):
+            lines.append(f"{prefix}RETURN")
+            if node.value:
+                lines.append(ast_to_string([node.value], indent + 1))
+        elif isinstance(node, FuncCallNode):
+            lines.append(f"{prefix}CALL {node.name}")
+            if node.args:
+                lines.append(ast_to_string(node.args, indent + 1))
+        elif isinstance(node, ArrayLiteralNode):
+            lines.append(f"{prefix}ARRAY [{len(node.elements)} elements]")
+            lines.append(ast_to_string(node.elements, indent + 1))
+        elif isinstance(node, ArrayAccessNode):
+            lines.append(f"{prefix}INDEX_ACCESS")
+            lines.append(ast_to_string([node.array], indent + 1))
+            lines.append(f"{prefix}  index:")
+            lines.append(ast_to_string([node.index], indent + 2))
+        elif isinstance(node, ArrayAssignNode):
+            lines.append(f"{prefix}ARRAY_ASSIGN {node.name}")
+            lines.append(f"{prefix}  index:")
+            lines.append(ast_to_string([node.index], indent + 2))
+            lines.append(f"{prefix}  value:")
+            lines.append(ast_to_string([node.value], indent + 2))
+        elif isinstance(node, InputNode):
+            lines.append(f"{prefix}INPUT")
+            if node.prompt:
+                lines.append(ast_to_string([node.prompt], indent + 1))
+        elif isinstance(node, TypeCastNode):
+            lines.append(f"{prefix}CAST {node.target_type}()")
+            lines.append(ast_to_string([node.expr], indent + 1))
 
     return "\n".join(lines)
 
@@ -355,7 +392,7 @@ async def run_code(request: RunRequest) -> RunResponse:
         # === Stage 7: Interpretation ===
         start = time.perf_counter()
         interpreter = Interpreter()
-        output_lines = interpreter.execute(ast)
+        output_lines = interpreter.execute(ast, inputs=request.inputs)
         exec_time = (time.perf_counter() - start) * 1000
 
         print_execution_result(output_lines, exec_time)
