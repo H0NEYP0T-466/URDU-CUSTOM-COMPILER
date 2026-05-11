@@ -2,7 +2,7 @@
 Urdu Custom Compiler - Tree-Walk Interpreter
 Evaluates AST nodes recursively, maintains scoped symbol table, collects output.
 Supports block scoping: variables in agar/jabtak blocks are local.
-Supports functions, arrays, user input, and type casting.
+Supports functions and arrays.
 """
 
 from typing import Any, Dict, List, Optional, Union
@@ -11,7 +11,6 @@ from .parser import (
     BinOpNode, UnaryOpNode, AssignNode, PrintNode, IfNode, WhileNode,
     FuncDefNode, ReturnNode, FuncCallNode,
     ArrayLiteralNode, ArrayAccessNode, ArrayAssignNode,
-    InputNode, TypeCastNode,
 )
 
 
@@ -82,7 +81,7 @@ class Interpreter:
     """
     Tree-walk interpreter for the Urdu language AST.
     Supports block scoping for agar/jabtak blocks.
-    Supports functions, arrays, user input, and type casting.
+    Supports functions and arrays.
 
     Usage:
         interp = Interpreter()
@@ -94,17 +93,13 @@ class Interpreter:
         self.output: List[str] = []
         self.functions: Dict[str, FuncDefNode] = {}  # function name -> definition
         self.call_depth = 0         # recursion depth tracker
-        self._inputs: List[str] = []  # pre-supplied input strings (for web API)
-        self._input_index = 0        # current position in inputs list
 
-    def execute(self, statements: List[ASTNode], inputs: Optional[List[str]] = None) -> List[str]:
+    def execute(self, statements: List[ASTNode]) -> List[str]:
         """Execute a list of AST statements and return collected output lines."""
         self.env = Environment()
         self.output = []
         self.functions = {}
         self.call_depth = 0
-        self._inputs = inputs or []
-        self._input_index = 0
         for stmt in statements:
             self._exec_node(stmt)
         return self.output
@@ -274,50 +269,7 @@ class Interpreter:
                 )
             return arr[index]
 
-        if isinstance(node, InputNode):
-            return self._handle_input(node)
-
-        if isinstance(node, TypeCastNode):
-            return self._handle_typecast(node)
-
         raise UrduRuntimeError(f"Unknown expression type: {type(node).__name__}")
-
-    def _handle_input(self, node: InputNode) -> str:
-        """Handle input() — use pre-supplied inputs for web, real input() for terminal."""
-        prompt = ""
-        if node.prompt:
-            prompt = self._to_string(self._eval(node.prompt))
-
-        if self._input_index < len(self._inputs):
-            # Use pre-supplied input (web API mode)
-            value = self._inputs[self._input_index]
-            self._input_index += 1
-            if prompt:
-                self.output.append(f"{prompt}{value}")
-            return value
-        else:
-            # No more pre-supplied inputs — return empty string
-            if prompt:
-                self.output.append(prompt)
-            return ""
-
-    def _handle_typecast(self, node: TypeCastNode) -> Any:
-        """Handle int() and str() type casting."""
-        value = self._eval(node.expr)
-        if node.target_type == "int":
-            try:
-                if isinstance(value, float):
-                    return int(value)
-                if isinstance(value, bool):
-                    return 1 if value else 0
-                return int(value)
-            except (ValueError, TypeError):
-                raise UrduRuntimeError(
-                    f"'{self._to_string(value)}' ko int mein convert nahi kar sakte"
-                )
-        if node.target_type == "str":
-            return self._to_string(value)
-        raise UrduRuntimeError(f"Unknown type cast: '{node.target_type}'")
 
     def _eval_binop(self, node: BinOpNode) -> Any:
         """Evaluate a binary operation."""

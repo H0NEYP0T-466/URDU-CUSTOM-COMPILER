@@ -11,7 +11,6 @@ from .parser import (
     BinOpNode, UnaryOpNode, AssignNode, PrintNode, IfNode, WhileNode,
     FuncDefNode, ReturnNode, FuncCallNode,
     ArrayLiteralNode, ArrayAccessNode, ArrayAssignNode,
-    InputNode, TypeCastNode,
 )
 
 
@@ -275,15 +274,6 @@ def _print_node(node: ASTNode, prefix: str = "", is_last: bool = True) -> None:
         print(f"{child_prefix}{C.DIM}└── {C.RESET}{C.ITALIC}{C.DIM}value:{C.RESET}")
         _print_node(node.value, child_prefix + "    ", is_last=True)
 
-    elif isinstance(node, InputNode):
-        print(f"{prefix}{C.DIM}{connector}{C.RESET}{C.BR_GREEN}INPUT{C.RESET}")
-        if node.prompt:
-            _print_node(node.prompt, child_prefix, is_last=True)
-
-    elif isinstance(node, TypeCastNode):
-        print(f"{prefix}{C.DIM}{connector}{C.RESET}{C.BR_MAGENTA}CAST{C.RESET} {C.BR_WHITE}{node.target_type}(){C.RESET}")
-        _print_node(node.expr, child_prefix, is_last=True)
-
     else:
         print(f"{prefix}{C.DIM}{connector}{C.RESET}{C.RED}UNKNOWN{C.RESET} {type(node).__name__}")
 
@@ -321,11 +311,6 @@ def _count_nodes(nodes: List[ASTNode]) -> int:
             count += _count_nodes([node.array, node.index])
         elif isinstance(node, ArrayAssignNode):
             count += _count_nodes([node.index, node.value])
-        elif isinstance(node, InputNode):
-            if node.prompt:
-                count += _count_nodes([node.prompt])
-        elif isinstance(node, TypeCastNode):
-            count += _count_nodes([node.expr])
     return count
 
 

@@ -12,7 +12,6 @@ from .parser import (
     BinOpNode, UnaryOpNode, AssignNode, PrintNode, IfNode, WhileNode,
     FuncDefNode, ReturnNode, FuncCallNode,
     ArrayLiteralNode, ArrayAccessNode, ArrayAssignNode,
-    InputNode, TypeCastNode,
 )
 
 
@@ -175,15 +174,5 @@ class CodeGenerator:
             arr = self._gen_expr(node.array)
             idx = self._gen_expr(node.index)
             return f"{arr}[{idx}]"
-
-        if isinstance(node, InputNode):
-            if node.prompt:
-                prompt_str = self._gen_expr(node.prompt)
-                return f"input({prompt_str})"
-            return "input()"
-
-        if isinstance(node, TypeCastNode):
-            expr_str = self._gen_expr(node.expr)
-            return f"{node.target_type}({expr_str})"
 
         return "None"

@@ -89,14 +89,7 @@ class ArrayAssignNode:
     index: "ASTNode"
     value: "ASTNode"
 
-@dataclass
-class InputNode:
-    prompt: Optional["ASTNode"] = None
 
-@dataclass
-class TypeCastNode:
-    target_type: str
-    expr: "ASTNode"
 
 ASTNode = Union[
     NumberNode, StringNode, BoolNode, VarNode,
@@ -104,7 +97,6 @@ ASTNode = Union[
     AssignNode, PrintNode, IfNode, WhileNode,
     FuncDefNode, ReturnNode, FuncCallNode,
     ArrayLiteralNode, ArrayAccessNode, ArrayAssignNode,
-    InputNode, TypeCastNode,
 ]
 
 
@@ -120,12 +112,8 @@ ALL_KEYWORDS = {
     "ghalat": "boolean false value",
     "aur": "logical AND operator",
     "ya": "logical OR operator",
-    "banao": "function define karo (define function)",
-    "wapis": "value wapis karo (return)",
-    "karo": "function ko call karo (call function)",
-    "input": "user se input lo (read input)",
-    "int": "number mein badlo (convert to int)",
-    "str": "string mein badlo (convert to string)",
+    "functionbnao": "function define karo (define function)",
+    "wapisbejo": "value wapis karo (return)",
 }
 
 
@@ -181,7 +169,8 @@ def _build_helpful_error(tok: Token) -> str:
     if tok.type == TokenType.IDENTIFIER:
         return (
             f"'{word}' ek variable naam hai, lekin yahan pe statement hona chahiye. "
-            f"Har line 'rakho' (assign), 'dikhao' (print), 'agar' (if), ya 'jabtak' (while) se shuru honi chahiye."
+            f"Har line 'rakho' (assign), 'dikhao' (print), 'agar' (if), ya 'jabtak' (while) se shuru honi chahiye, "
+            f"ya function call karo jaise: {word}()"
         )
 
     if tok.type == TokenType.NUMBER or tok.type == TokenType.FLOAT:
@@ -210,7 +199,7 @@ def _build_helpful_error(tok: Token) -> str:
 
     return (
         f"'{word}' yahan expected nahi tha. "
-        f"Valid statements hain: rakho (assign), dikhao (print), agar (if), jabtak (while), banao (function), karo (call), wapis (return)"
+        f"Valid statements hain: rakho (assign), dikhao (print), agar (if), jabtak (while), functionbnao (function), wapisbejo (return)"
     )
 
 
@@ -309,12 +298,10 @@ class Parser:
                 return self._parse_if()
             elif tok.value == "jabtak":
                 return self._parse_while()
-            elif tok.value == "banao":
+            elif tok.value == "functionbnao":
                 return self._parse_funcdef()
-            elif tok.value == "wapis":
+            elif tok.value == "wapisbejo":
                 return self._parse_return()
-            elif tok.value == "karo":
-                return self._parse_func_call_stmt()
             else:
                 # Unknown keyword - give helpful suggestion
                 suggestion = _suggest_keyword(tok.value)
@@ -327,11 +314,17 @@ class Parser:
                     )
                 raise ParseError(
                     f"'{tok.value}' yahan use nahi ho sakta. "
-                    f"Statement 'rakho', 'dikhao', 'agar', 'jabtak', 'banao', 'karo', ya 'wapis' se shuru honi chahiye.",
+                    f"Statement 'rakho', 'dikhao', 'agar', 'jabtak', 'functionbnao', ya 'wapisbejo' se shuru honi chahiye.",
                     tok.line
                 )
 
-        # Not a keyword - build helpful error
+        # Identifier followed by '(' — function call as a statement
+        if tok.type == TokenType.IDENTIFIER:
+            # Peek ahead to see if it's a function call
+            if self.pos + 1 < len(self.tokens) and self.tokens[self.pos + 1].type == TokenType.LPAREN:
+                return self._parse_func_call_stmt()
+
+        # Not a keyword or function call - build helpful error
         raise ParseError(_build_helpful_error(tok), tok.line)
 
     def _parse_assign(self) -> ASTNode:
@@ -378,8 +371,8 @@ class Parser:
         return WhileNode(condition=condition, body=body)
 
     def _parse_funcdef(self) -> FuncDefNode:
-        """Parse: banao func_name(param1, param2) ... khatam"""
-        self._advance()  # consume 'banao'
+        """Parse: functionbnao func_name(param1, param2) ... khatam"""
+        self._advance()  # consume 'functionbnao'
         name_tok = self._expect(TokenType.IDENTIFIER)
         self._expect(TokenType.LPAREN, "(")
 
@@ -400,8 +393,8 @@ class Parser:
         return FuncDefNode(name=name_tok.value, params=params, body=body)
 
     def _parse_return(self) -> ReturnNode:
-        """Parse: wapis [expression]"""
-        self._advance()  # consume 'wapis'
+        """Parse: wapisbejo [expression]"""
+        self._advance()  # consume 'wapisbejo'
         # Check if there's a value to return (not newline/EOF/khatam)
         tok = self._current()
         if tok.type in (TokenType.NEWLINE, TokenType.EOF) or \
@@ -411,9 +404,8 @@ class Parser:
         return ReturnNode(value=value)
 
     def _parse_func_call_stmt(self) -> FuncCallNode:
-        """Parse: karo func_name(arg1, arg2)"""
-        self._advance()  # consume 'karo'
-        name_tok = self._expect(TokenType.IDENTIFIER)
+        """Parse: func_name(arg1, arg2) — function call as a statement."""
+        name_tok = self._advance()  # consume identifier
         self._expect(TokenType.LPAREN, "(")
         args = self._parse_arg_list()
         self._expect(TokenType.RPAREN, ")")
@@ -500,25 +492,6 @@ class Parser:
         if tok.type == TokenType.KEYWORD and tok.value == "ghalat":
             self._advance()
             return BoolNode(False)
-
-        # input() — user input
-        if tok.type == TokenType.KEYWORD and tok.value == "input":
-            self._advance()  # consume 'input'
-            self._expect(TokenType.LPAREN, "(")
-            prompt = None
-            if self._current().type != TokenType.RPAREN:
-                prompt = self._parse_expression()
-            self._expect(TokenType.RPAREN, ")")
-            return InputNode(prompt=prompt)
-
-        # int() / str() — type casting
-        if tok.type == TokenType.KEYWORD and tok.value in ("int", "str"):
-            target = tok.value
-            self._advance()  # consume 'int' or 'str'
-            self._expect(TokenType.LPAREN, "(")
-            expr = self._parse_expression()
-            self._expect(TokenType.RPAREN, ")")
-            return TypeCastNode(target_type=target, expr=expr)
 
         # Identifier — could be variable, function call, or array access
         if tok.type == TokenType.IDENTIFIER:

@@ -48,7 +48,6 @@ app.add_middleware(
 
 class RunRequest(BaseModel):
     code: str
-    inputs: list[str] = []
 
 
 class TokenInfo(BaseModel):
@@ -113,7 +112,6 @@ def ast_to_string(nodes: list, indent: int = 0) -> str:
         BinOpNode, UnaryOpNode, NumberNode, StringNode, BoolNode, VarNode,
         FuncDefNode, ReturnNode, FuncCallNode,
         ArrayLiteralNode, ArrayAccessNode, ArrayAssignNode,
-        InputNode, TypeCastNode,
     )
 
     lines: list[str] = []
@@ -182,14 +180,6 @@ def ast_to_string(nodes: list, indent: int = 0) -> str:
             lines.append(ast_to_string([node.index], indent + 2))
             lines.append(f"{prefix}  value:")
             lines.append(ast_to_string([node.value], indent + 2))
-        elif isinstance(node, InputNode):
-            lines.append(f"{prefix}INPUT")
-            if node.prompt:
-                lines.append(ast_to_string([node.prompt], indent + 1))
-        elif isinstance(node, TypeCastNode):
-            lines.append(f"{prefix}CAST {node.target_type}()")
-            lines.append(ast_to_string([node.expr], indent + 1))
-
     return "\n".join(lines)
 
 
@@ -392,7 +382,7 @@ async def run_code(request: RunRequest) -> RunResponse:
         # === Stage 7: Interpretation ===
         start = time.perf_counter()
         interpreter = Interpreter()
-        output_lines = interpreter.execute(ast, inputs=request.inputs)
+        output_lines = interpreter.execute(ast)
         exec_time = (time.perf_counter() - start) * 1000
 
         print_execution_result(output_lines, exec_time)

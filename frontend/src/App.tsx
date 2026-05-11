@@ -28,8 +28,6 @@ export default function App() {
   const [isRunning, setIsRunning] = useState(false);
   const [executionTime, setExecutionTime] = useState<number | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [inputText, setInputText] = useState("");
-  const [inputOpen, setInputOpen] = useState(false);
 
   // ── Resizable split ──
   const [editorPct, setEditorPct] = useState(60); // editor width as % of main area
@@ -76,18 +74,8 @@ export default function App() {
 
     const startTime = performance.now();
 
-    // Parse input lines (one per line, filter empty trailing lines)
-    const inputs = inputText
-      .split("\n")
-      .filter((line, idx, arr) => {
-        // Keep all lines except trailing empty ones
-        if (line.trim() !== "") return true;
-        // Check if there are any non-empty lines after this
-        return arr.slice(idx + 1).some((l) => l.trim() !== "");
-      });
-
     try {
-      const result = await runCode(code, inputs);
+      const result = await runCode(code);
       const elapsed = performance.now() - startTime;
       setExecutionTime(elapsed);
       setCompilerData(result);
@@ -102,7 +90,7 @@ export default function App() {
     } finally {
       setIsRunning(false);
     }
-  }, [code, inputText]);
+  }, [code]);
 
   const handleClear = useCallback(() => {
     setCompilerData(null);
@@ -144,32 +132,6 @@ export default function App() {
               onChange={setCode}
               errorMarkers={compilerData?.error_markers ?? []}
             />
-            {/* Input Panel */}
-            <div className="app__input-panel" id="input-panel">
-              <button
-                className="app__input-toggle"
-                onClick={() => setInputOpen((prev) => !prev)}
-                id="input-toggle-btn"
-              >
-                <span className="app__input-toggle-icon">{inputOpen ? "▼" : "▶"}</span>
-                ⌨️ Input Values
-                {inputText.trim() && (
-                  <span className="app__input-badge">
-                    {inputText.split("\n").filter((l) => l.trim()).length}
-                  </span>
-                )}
-              </button>
-              {inputOpen && (
-                <textarea
-                  className="app__input-textarea"
-                  value={inputText}
-                  onChange={(e) => setInputText(e.target.value)}
-                  placeholder={"Har line pe ek input likho...\nMisal: Fezan\n42\nsahi"}
-                  rows={4}
-                  id="input-textarea"
-                />
-              )}
-            </div>
           </div>
           <div
             className="app__resize-handle"

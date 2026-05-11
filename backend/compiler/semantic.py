@@ -18,7 +18,6 @@ from .parser import (
     BinOpNode, UnaryOpNode, AssignNode, PrintNode, IfNode, WhileNode,
     FuncDefNode, ReturnNode, FuncCallNode,
     ArrayLiteralNode, ArrayAccessNode, ArrayAssignNode,
-    InputNode, TypeCastNode,
 )
 
 
@@ -224,7 +223,7 @@ class SemanticAnalyzer:
         self.functions[node.name] = len(node.params)
 
         # Function body gets its own scope with params defined
-        self._push_scope(f"banao:{node.name}")
+        self._push_scope(f"functionbnao:{node.name}")
         for param in node.params:
             self.current_scope.define(param, TYPE_UNKNOWN)
             self.all_symbols.append(SymbolEntry(
@@ -241,7 +240,7 @@ class SemanticAnalyzer:
         """Check function call: validate function exists and arg count."""
         if node.name not in self.functions:
             self.errors.append(
-                f"Function '{node.name}' defined nahi hai -- pehle 'banao' se define karo"
+                f"Function '{node.name}' defined nahi hai -- pehle 'functionbnao' se define karo"
             )
         else:
             expected = self.functions[node.name]
@@ -310,14 +309,6 @@ class SemanticAnalyzer:
             if node.prompt:
                 self._check_expr(node.prompt)
             return TYPE_STRING
-
-        if isinstance(node, TypeCastNode):
-            self._check_expr(node.expr)
-            if node.target_type == "int":
-                return TYPE_INT
-            if node.target_type == "str":
-                return TYPE_STRING
-            return TYPE_UNKNOWN
 
         return TYPE_UNKNOWN
 

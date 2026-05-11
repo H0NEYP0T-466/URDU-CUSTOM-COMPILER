@@ -20,7 +20,6 @@ from .parser import (
     BinOpNode, UnaryOpNode, AssignNode, PrintNode, IfNode, WhileNode,
     FuncDefNode, ReturnNode, FuncCallNode,
     ArrayLiteralNode, ArrayAccessNode, ArrayAssignNode,
-    InputNode, TypeCastNode,
 )
 
 
@@ -211,21 +210,6 @@ class IRGenerator:
             idx = self._gen_expr(node.index)
             temp = self._new_temp()
             self._emit(f"{temp} = {arr}[{idx}]")
-            return temp
-
-        if isinstance(node, InputNode):
-            temp = self._new_temp()
-            if node.prompt:
-                prompt = self._gen_expr(node.prompt)
-                self._emit(f"{temp} = input({prompt})")
-            else:
-                self._emit(f"{temp} = input()")
-            return temp
-
-        if isinstance(node, TypeCastNode):
-            val = self._gen_expr(node.expr)
-            temp = self._new_temp()
-            self._emit(f"{temp} = {node.target_type}({val})")
             return temp
 
         # Fallback

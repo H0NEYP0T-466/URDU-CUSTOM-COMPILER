@@ -123,18 +123,18 @@ dikhao z`,
   {
     title: "Functions",
     icon: "🔧",
-    description: "banao se function define karo, karo se call karo",
+    description: "functionbnao se function define karo aur call karo",
     code: `# Function banao aur use karo
-banao add(a, b)
-    wapis a + b
+functionbnao add(a, b)
+    wapisbejo a + b
 khatam
 
-banao greet(naam)
+functionbnao greet(naam)
     dikhao "Assalam o Alaikum, "
     dikhao naam
 khatam
 
-karo greet("Duniya")
+greet("Duniya")
 rakho result = add(10, 20)
 dikhao "Jama: "
 dikhao result`,
@@ -159,21 +159,6 @@ rakho nums = [10, 20, 30, 40, 50]
 rakho total = nums[0] + nums[1] + nums[2]
 dikhao "Pehle 3 ka total: "
 dikhao total`,
-  },
-  {
-    title: "User Input",
-    icon: "⌨️",
-    description: "User se input lo aur use karo (neeche input do)",
-    code: `# User se naam lo
-rakho naam = input("Apna naam likho: ")
-dikhao "Assalam o Alaikum, "
-dikhao naam
-
-# Number input lo aur double karo
-rakho x = int(input("Ek number likho: "))
-rakho double = x * 2
-dikhao "Double: "
-dikhao double`,
   },
 ];
 

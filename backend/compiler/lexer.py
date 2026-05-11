@@ -17,7 +17,7 @@ from typing import List
 
 class TokenType(Enum):
     """All token categories recognised by the Urdu language."""
-    KEYWORD     = auto()   # rakho, dikhao, agar, warna, jabtak, khatam, sahi, ghalat, aur, ya, banao, wapis, karo, input, int, str
+    KEYWORD     = auto()   # rakho, dikhao, agar, warna, jabtak, khatam, sahi, ghalat, aur, ya, functionbnao, wapisbejo
     IDENTIFIER  = auto()   # variable names
     NUMBER      = auto()   # integer literals
     FLOAT       = auto()   # floating-point literals
@@ -67,8 +67,7 @@ KEYWORDS = {
     "rakho", "dikhao", "agar", "warna",
     "jabtak", "khatam", "sahi", "ghalat",
     "aur", "ya",
-    "banao", "wapis", "karo",
-    "input", "int", "str",
+    "functionbnao", "wapisbejo",
 }
 
 # Multi-character operators (checked first so '>' is not consumed before '>=')
