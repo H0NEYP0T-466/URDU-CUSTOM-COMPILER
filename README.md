@@ -68,16 +68,20 @@
 
 ## ✨ Features
 
-- 🇵🇰 **Roman Urdu Syntax** — Write code using Urdu keywords (`rakho`, `dikhao`, `agar`, `warna`, `jabtak`)
+- 🇵🇰 **Roman Urdu Syntax** — Write code using 12 Urdu keywords (`rakho`, `dikhao`, `agar`, `warna`, `jabtak`, `functionbnao`, `wapisbejo`, and more)
 - 🔬 **Full Compiler Pipeline** — Lexer → Parser → Semantic Analysis → TAC IR → Optimizer → Python Codegen → Interpreter
-- 🎨 **Web IDE** — Monaco Editor (the same editor as VS Code) with syntax highlighting and error markers
+- 🎨 **Web IDE** — Monaco Editor (the same editor as VS Code) with custom syntax highlighting, error markers, and a dark theme
 - 📊 **Compiler Visualization** — View tokens, AST, TAC (Three Address Code), optimized IR, generated Python, and semantic symbol tables in real time
-- ⚡ **Optimization Pass** — Constant folding at the IR level
-- 🔒 **Semantic Analysis** — Type checking, scope resolution, undeclared variable detection
-- 📦 **Block Scoping** — Variables declared inside `agar`/`jabtak` blocks are local to that scope
-- 🐍 **Python Code Generation** — Compiles Urdu code to equivalent Python
+- ⚡ **Three Optimization Passes** — Constant propagation, constant folding, and dead code elimination at the IR level
+- 🔒 **Semantic Analysis** — Type checking, scope resolution, undeclared variable detection, division-by-zero detection
+- 📦 **Block Scoping** — Variables declared inside `agar`/`jabtak`/`functionbnao` blocks are local to that scope
+- 🐍 **Python Code Generation** — Transpiles Urdu code to equivalent, runnable Python
 - 🌐 **REST API** — FastAPI backend with a single `POST /run` endpoint
 - 📱 **Responsive Split-Pane UI** — Resizable editor and output panels
+- 🔧 **Function Definitions** — Define reusable functions with `functionbnao`, parameters, and `wapisbejo` return
+- 📋 **Arrays** — Create arrays with `[1, 2, 3]`, access by index `arr[0]`, and modify elements `arr[0] = 99`
+- 📝 **11 Built-in Examples** — Sidebar with runnable examples: Hello World, If/Else, While, Arithmetic, Functions, Arrays, and more
+- 🧪 **Integration Tests** — 12 test cases covering the full pipeline including functions, arrays, scoping, and optimization
 
 ---
 
@@ -85,18 +89,20 @@
 
 ### Keywords
 
-| Keyword  | Meaning          |
-|----------|------------------|
-| `rakho`  | Declare/assign a variable |
-| `dikhao` | Print to output |
-| `agar`   | If statement     |
-| `warna`  | Else clause      |
-| `jabtak` | While loop       |
-| `khatam` | End a block      |
-| `sahi`   | Boolean true     |
-| `ghalat` | Boolean false    |
-| `aur`    | Logical AND      |
-| `ya`     | Logical OR       |
+| Keyword        | Meaning                |
+|----------------|------------------------|
+| `rakho`        | Declare/assign a variable |
+| `dikhao`       | Print to output        |
+| `agar`         | If statement           |
+| `warna`        | Else clause            |
+| `jabtak`       | While loop             |
+| `khatam`       | End a block            |
+| `sahi`         | Boolean true           |
+| `ghalat`       | Boolean false          |
+| `aur`          | Logical AND            |
+| `ya`           | Logical OR             |
+| `functionbnao` | Define a function      |
+| `wapisbejo`    | Return from function   |
 
 ### Operators
 
@@ -113,6 +119,7 @@
 - **Numbers** — Integers and floats: `42`, `3.14`
 - **Strings** — Double-quoted: `"Assalam o Alaikum"`
 - **Booleans** — `sahi` (true), `ghalat` (false)
+- **Arrays** — Ordered lists: `[10, 20, 30]`, accessible by index `arr[0]`
 
 ---
 
@@ -231,6 +238,86 @@ khatam
 koi ek ghalat hai
 ```
 
+### Example 6: Functions — Definition & Return
+
+```
+functionbnao add(a, b)
+    wapisbejo a + b
+khatam
+
+rakho result = add(3, 4)
+dikaho result
+```
+
+**Output:**
+```
+7
+```
+
+### Example 7: Functions — Call in Expression
+
+```
+functionbnao double(x)
+    wapisbejo x * 2
+khatam
+
+dikaho double(5) + 3
+```
+
+**Output:**
+```
+13
+```
+
+### Example 8: Arrays — Creation & Access
+
+```
+rakho nums = [10, 20, 30]
+dikaho nums[0]
+dikaho nums[2]
+```
+
+**Output:**
+```
+10
+30
+```
+
+### Example 9: Arrays — Index Assignment
+
+```
+rakho nums = [10, 20, 30]
+rakho nums[1] = 99
+dikaho nums[1]
+```
+
+**Output:**
+```
+99
+```
+
+### Example 10: Functions + Arrays + While Loop
+
+```
+functionbnao sum_list(arr, size)
+    rakho total = 0
+    rakho i = 0
+    jabtak i < size
+        rakho total = total + arr[i]
+        rakho i = i + 1
+    khatam
+    wapisbejo total
+khatam
+
+rakho mylist = [1, 2, 3, 4, 5]
+dikaho sum_list(mylist, 5)
+```
+
+**Output:**
+```
+15
+```
+
 ### API Usage (cURL)
 
 ```bash
@@ -270,7 +357,8 @@ The compiler follows a classic multi-stage pipeline:
 │INTERPRETER│◀──│  CODEGEN │◀──│OPTIMIZER │◀──│   TAC    │
 │          │    │          │    │          │    │          │
 │ Tree-walk│    │ Python   │    │ Constant │    │ Three    │
-│ execute  │    │ output   │    │ folding  │    │ Address  │
+│ execute  │    │ output   │    │ prop/fold│    │ Address  │
+│          │    │          │    │ + DCE    │    │ Code     │
 └──────────┘    └──────────┘    └──────────┘    └──────────┘
 ```
 
@@ -280,7 +368,7 @@ The compiler follows a classic multi-stage pipeline:
 2. **Parser** (`compiler/parser.py`) — Recursive-descent parser that builds an Abstract Syntax Tree (AST).
 3. **Semantic Analyzer** (`compiler/semantic.py`) — Type checking, scope resolution, undeclared variable detection, scoped symbol table.
 4. **IR Generator** (`compiler/ir_generator.py`) — Converts AST to Three Address Code (TAC).
-5. **Optimizer** (`compiler/optimizer.py`) — Constant folding on TAC instructions.
+5. **Optimizer** (`compiler/optimizer.py`) — Three optimization passes on TAC: constant propagation, constant folding, and dead code elimination.
 6. **Code Generator** (`compiler/codegen.py`) — Translates AST to equivalent Python source code.
 7. **Interpreter** (`compiler/interpreter.py`) — Tree-walk interpreter that executes the AST directly.
 
@@ -340,11 +428,11 @@ The IR Generator converts the AST into Three Address Code (TAC), a low-level int
   <img src="frontend/visuals/tac.PNG" alt="TAC — Three Address Code (original and optimized)" width="700" />
 </p>
 
-<p align="center"><em>TAC instructions: original (unoptimized) vs. optimized after constant folding</em></p>
+<p align="center"><em>TAC instructions: original (unoptimized) vs. optimized after constant propagation, constant folding, and dead code elimination</em></p>
 
-### Stage 5: Optimization — Constant Folding
+### Stage 5: Optimization — Constant Propagation, Folding & Dead Code Elimination
 
-The Optimizer runs constant folding on the TAC instructions, reducing expressions like `3 + 4` to `7` at compile time.
+The Optimizer runs three passes on the TAC instructions: **constant propagation** (substitutes single-assignment variables with their literal values), **constant folding** (evaluates constant expressions like `3 + 4` to `7` at compile time), and **dead code elimination** (removes unused temporary variable assignments).
 
 <p align="center">
   <img src="frontend/visuals/server_imgof_tac_optimization_pythoncde_output.PNG" alt="TAC, Optimization, and Python Code — Full pipeline view" width="900" />
